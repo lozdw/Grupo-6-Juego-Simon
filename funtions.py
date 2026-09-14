@@ -68,7 +68,7 @@ def visualizar_colores(secuencia, boton_azul, boton_verde, boton_rojo, boton_ama
 
     for boton in (boton_azul, boton_verde, boton_rojo, boton_amarillo):
         boton.config(state="normal")
-    boton_inicio.config(text="START GAME!", state="normal")
+    boton_inicio.config(text="RESTART", state="normal")
     if respuesta_turno:
         respuesta_turno()
 
