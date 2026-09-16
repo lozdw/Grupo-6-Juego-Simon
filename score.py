@@ -9,4 +9,4 @@ class GestorPuntuacion:
         puntos_base = max(0.0, float(tiempo_restante)) * 100 + max(1, int(nivel)) * 50
         puntos = int(puntos_base * float(multiplicador))
         self.total += puntos
-        return puntos
+        return puntos 
