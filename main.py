@@ -1,10 +1,19 @@
-from tkinter import Tk
+import sys
+import pygame
 from app import App
-import constants as const
+from config import ConfiguracionJuego
+
+def main():
+    pygame.init()
+    pygame.mixer.init()
+
+    config = ConfiguracionJuego()
+    juego = App(config)
+    juego.ejecutar()
+
+    pygame.mixer.quit()
+    pygame.quit()
+    sys.exit()
 
 if __name__ == "__main__":
-    ventana = Tk()
-    ventana.title(const.TITULO_JUEGO)
-    ventana.geometry(f"{const.ANCHO_PANTALLA}x{const.ALTO_PANTALLA}")
-    App(ventana)
-    ventana.mainloop()
+    main()
