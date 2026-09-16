@@ -1,133 +1,193 @@
+import pygame
 from score import GestorPuntuacion
+from funtions import GestorSecuencia
 from personajes import Miku, Teto
-from engine import MotorSimon
-from visual import RenderizadorSimon
-import constants as const
 
 class App:
-    def __init__(self, ventana):
-        self.ventana = ventana
-        self.ventana.config(bg=const.COLOR_FONDO)
+    def __init__(self, config):
+        self.pantalla = pygame.display.set_mode((config.ancho_pantalla, config.alto_pantalla))
+        pygame.display.set_caption(config.titulo)
+        self.reloj = pygame.time.Clock()
+        self.fps_objetivo = config.fps
+        self.ejecutando = True
+
         self.gestor_puntuacion = GestorPuntuacion()
-        self.motor = MotorSimon(self.gestor_puntuacion)
-        self.view = RenderizadorSimon(self.ventana, self.motor, self)
+        self.gestor_secuencia = GestorSecuencia(config.archivo_niveles)
+        self.personaje_actual = None
 
-        self.t_total = const.TIEMPO_TOTAL_TEMPORIZADOR
-        self.t_restante = self.t_total
-        self.t_faltante = 0.0
-        self.temporizador_activo = False
+        pygame.font.init()
+        self.fuente_titulo = pygame.font.SysFont("Arial", 48, bold=True)
+        self.fuente_normal = pygame.font.SysFont("Arial", 24, bold=True)
 
-        self.mostrar_titulo()
+        self.estado_actual = "MENU" # MENU, SELECCION, MOSTRANDO_SECUENCIA, JUGANDO, GAME_OVER
+        
+        # Colores (1: Rojo, 2: Azul, 3: Verde, 4: Amarillo - Basado en tu Tkinter)
+        self.colores_base = {
+            1: (150, 0, 0),    
+            2: (0, 0, 150),    
+            3: (0, 150, 0),    
+            4: (150, 150, 0)   
+        }
+        self.colores_brillantes = {
+            1: (255, 50, 50),
+            2: (50, 50, 255),
+            3: (50, 255, 50),
+            4: (255, 255, 50)
+        }
+        
+        self.rects_botones = {
+            1: pygame.Rect(350, 150, 150, 150), # Rojo (Der. Arriba)
+            3: pygame.Rect(100, 150, 150, 150), # Verde (Izq. Arriba)
+            2: pygame.Rect(100, 350, 150, 150), # Azul (Izq. Abajo)
+            4: pygame.Rect(350, 350, 150, 150)  # Amarillo (Der. Abajo)
+        }
+        
+        self.rect_miku = pygame.Rect(150, 300, 100, 50)
+        self.rect_teto = pygame.Rect(350, 300, 100, 50)
+        self.rect_reinicio = pygame.Rect(200, 550, 200, 50)
 
-    def mostrar_titulo(self):
-        self.view.ocultar_pantallas()
-        self.view.pantalla_titulo.pack(fill="both", expand=True)
-
-    def mostrar_seleccion_personaje(self, puntaje_final=None):
-        if puntaje_final is not None:
-            self.view.etiqueta_puntaje_final.config(text=f"Puntaje final: {puntaje_final}")
-        self.view.ocultar_pantallas()
-        self.view.pantalla_personaje.pack(fill="both", expand=True)
-
-    def seleccionar_personaje(self, nombre):
-        self.motor.personaje_actual = Miku() if nombre == "Miku" else Teto()
-        self.view.ocultar_pantallas()
-        self.view.pantalla_juego.pack(fill="both", expand=True)
-        self.preparar_juego()
-
-    def pulsar_color(self, numero_color):
-        self.motor.personaje_actual.aplicar_habilidad(self)
-        self.motor.registrar_color(
-            numero_color,
-            self.detener_temporizador,
-            self.al_completar_ronda,
-            self.mostrar_siguiente_nivel,
-            self.reiniciar_ronda_erronea
-        )
-
-    def al_completar_ronda(self, tiempo_restante, nivel):
-        puntos = self.gestor_puntuacion.agregar_por_ronda(
-            tiempo_restante, nivel, self.motor.personaje_actual.multiplicador_puntaje
-        )
-        self.view.etiqueta_puntuacion.config(text=f"Puntaje: {self.gestor_puntuacion.total}")
-        return puntos
-
-    def actualizar_interfaz_tiempo(self):
-        self.view.etiqueta_tiempo.config(text=f"Tiempo: {self.t_restante:.1f}s")
-        self.view.progreso["value"] = min(100, (self.t_restante / self.t_total) * 100)
+        self.t_total = 10.0
+        self.t_restante = 10.0
+        self.mensaje = "Listo"
+        
+        # Variables para la animación de parpadeo de secuencia
+        self.color_iluminado = None
+        self.indice_secuencia = 0
+        self.tiempo_ultimo_cambio = 0
+        self.luz_encendida = False
 
     def preparar_juego(self):
-        self.temporizador_activo = False
-        self.t_total = const.TIEMPO_TOTAL_TEMPORIZADOR
-        self.t_restante = self.t_total
-        self.t_faltante = 0.0
-        self.motor.personaje_actual.reiniciar_habilidad()
-        self.view.progreso["value"] = 100
-        self.view.etiqueta_puntuacion.config(text=f"Puntaje: {self.gestor_puntuacion.total}")
-        self.actualizar_interfaz_tiempo()
-        self.view.etiqueta_estado.config(
-            text=f"Nivel {self.motor.consultar_nivel()}", 
-            bg=const.COLOR_ESTADO_NIVEL, fg=const.COLOR_TEXTO_OSCURO
-        )
-        self.motor.iniciar_juego(self.view.animar_secuencia, self.iniciar_temporizador)
+        self.gestor_secuencia.iniciar_juego()
+        self.personaje_actual.reiniciar_habilidad()
+        self.t_total = 10.0
+        self.t_restante = 10.0
+        self.mensaje = f"Nivel {self.gestor_secuencia.consultar_nivel()}"
+        self.iniciar_animacion()
 
-    def pausar_temporizador(self):
-        self.temporizador_activo = False
+    def iniciar_animacion(self):
+        self.estado_actual = "MOSTRANDO_SECUENCIA"
+        self.indice_secuencia = 0
+        self.color_iluminado = None
+        self.luz_encendida = False
+        self.tiempo_ultimo_cambio = pygame.time.get_ticks()
 
-    def reanudar_temporizador(self):
-        self.temporizador_activo = True
-        self.actualizar_tiempo()
-
-    def volver_a_seleccion(self):
-        self.detener_temporizador()
-        self.motor.reiniciar_progreso()
-        self.gestor_puntuacion.reset()
-        self.view.etiqueta_puntuacion.config(text="Puntaje: 0")
-        self.motor.personaje_actual = None
-        self.mostrar_seleccion_personaje()
-
-    def finalizar_partida(self):
-        puntaje_final = self.gestor_puntuacion.total
-        self.detener_temporizador()
-        self.motor.reiniciar_progreso()
-        self.gestor_puntuacion.reset()
-        self.view.etiqueta_puntuacion.config(text="Puntaje: 0")
-        self.motor.personaje_actual = None
-        self.mostrar_seleccion_personaje(puntaje_final)
-
-    def mostrar_siguiente_nivel(self):
-        self.view.etiqueta_estado.config(text="¡Siguiente nivel!", bg=const.COLOR_ESTADO_AVANZA, fg=const.COLOR_TEXTO_OSCURO)
-        self.ventana.after(800, self.preparar_juego)
-
-    def reiniciar_ronda_erronea(self):
-        self.t_restante = max(0.0, self.t_restante - 2.0)
-        self.view.progreso["value"] = (self.t_restante / self.t_total) * 100
-        self.view.etiqueta_estado.config(text="¡Error! Secuencia reiniciada (-2s)", bg=const.COLOR_ESTADO_ERROR, fg="white")
-        if self.t_restante <= 0:
-            self.view.progreso["value"] = 0
-            self.finalizar_partida()
-            return
-        self.pausar_temporizador()
-        self.ventana.after(700, lambda: self.view.etiqueta_estado.config(text="Repitiendo secuencia...", bg=const.COLOR_ESTADO_REPETIR, fg=const.COLOR_TEXTO_OSCURO))
-        self.ventana.after(900, lambda: self.motor.repetir_secuencia(self.view.animar_secuencia, self.reanudar_temporizador))
-        self.ventana.after(1500, lambda: self.view.etiqueta_estado.config(text=f"Nivel {self.motor.consultar_nivel()}", bg=const.COLOR_ESTADO_NIVEL, fg=const.COLOR_TEXTO_OSCURO))
-
-    def iniciar_temporizador(self):
-        self.temporizador_activo = True
-        self.t_restante = self.t_total
-        self.actualizar_tiempo()
-
-    def detener_temporizador(self):
-        self.temporizador_activo = False
-
-    def actualizar_tiempo(self):
-        if self.temporizador_activo and self.t_restante > 0:
-            self.t_restante -= 0.1
-            self.t_faltante = self.t_total - self.t_restante
-            self.actualizar_interfaz_tiempo()
-            if round(self.t_restante, 2) <= 0:
-                self.view.progreso["value"] = 0
-                self.view.etiqueta_tiempo.config(text="Tiempo: 0.0s")
-                self.finalizar_partida()
+    def procesar_animacion(self):
+        ahora = pygame.time.get_ticks()
+        if ahora - self.tiempo_ultimo_cambio > 500: # 0.5s por parpadeo
+            self.tiempo_ultimo_cambio = ahora
+            
+            if not self.luz_encendida:
+                if self.indice_secuencia < len(self.gestor_secuencia.colores_secuencia):
+                    self.color_iluminado = self.gestor_secuencia.colores_secuencia[self.indice_secuencia]
+                    self.luz_encendida = True
+                else:
+                    self.color_iluminado = None
+                    self.estado_actual = "JUGANDO"
             else:
-                self.ventana.after(100, self.actualizar_tiempo)
+                self.color_iluminado = None
+                self.luz_encendida = False
+                self.indice_secuencia += 1
+
+    def ejecutar(self):
+        while self.ejecutando:
+            dt = self.reloj.tick(self.fps_objetivo) / 1000.0
+            
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    self.ejecutando = False
+                
+                if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                    self.manejar_clic(evento.pos)
+
+            # Restar tiempo solo si el jugador tiene el control
+            if self.estado_actual == "JUGANDO":
+                self.t_restante -= dt
+                if self.t_restante <= 0:
+                    self.t_restante = 0
+                    self.estado_actual = "GAME_OVER"
+
+            if self.estado_actual == "MOSTRANDO_SECUENCIA":
+                self.procesar_animacion()
+            
+            self.dibujar()
+            pygame.display.flip()
+
+    def manejar_clic(self, pos):
+        if self.estado_actual == "MENU":
+            self.estado_actual = "SELECCION"
+            
+        elif self.estado_actual == "SELECCION":
+            if self.rect_miku.collidepoint(pos):
+                self.personaje_actual = Miku()
+                self.preparar_juego()
+            elif self.rect_teto.collidepoint(pos):
+                self.personaje_actual = Teto()
+                self.preparar_juego()
+                
+        elif self.estado_actual == "JUGANDO":
+            self.personaje_actual.aplicar_habilidad(self)
+            
+            for numero, rect in self.rects_botones.items():
+                if rect.collidepoint(pos):
+                    resultado = self.gestor_secuencia.verificar_color(numero)
+                    if resultado == "ERROR":
+                        self.t_restante -= 2.0
+                        if self.t_restante <= 0:
+                            self.estado_actual = "GAME_OVER"
+                        else:
+                            self.mensaje = "¡Error! Repitiendo (-2s)"
+                            self.iniciar_animacion()
+                    elif resultado == "EXITO":
+                        self.gestor_puntuacion.agregar_por_ronda(
+                            self.t_restante, 
+                            self.gestor_secuencia.consultar_nivel() - 1, 
+                            self.personaje_actual.multiplicador_puntaje
+                        )
+                        self.mensaje = "¡Siguiente nivel!"
+                        self.preparar_juego()
+                    break
+
+            if self.rect_reinicio.collidepoint(pos):
+                self.gestor_secuencia.reiniciar_progreso()
+                self.estado_actual = "SELECCION"
+
+        elif self.estado_actual == "GAME_OVER":
+            if self.rect_reinicio.collidepoint(pos):
+                self.gestor_secuencia.reiniciar_progreso()
+                self.gestor_puntuacion.reset()
+                self.estado_actual = "SELECCION"
+
+    def dibujar(self):
+        self.pantalla.fill((189, 189, 189))
+        
+        if self.estado_actual == "MENU":
+            self.pantalla.blit(self.fuente_titulo.render("SIMON GAME", True, (0,0,0)), (150, 200))
+            self.pantalla.blit(self.fuente_normal.render("Haz clic para iniciar", True, (50,50,50)), (200, 300))
+            
+        elif self.estado_actual == "SELECCION":
+            self.pantalla.blit(self.fuente_titulo.render("ELEGIR PERSONAJE", True, (0,0,0)), (70, 100))
+            pygame.draw.rect(self.pantalla, (255,255,255), self.rect_miku)
+            pygame.draw.rect(self.pantalla, (255,255,255), self.rect_teto)
+            self.pantalla.blit(self.fuente_normal.render("Miku", True, (0,0,0)), (175, 310))
+            self.pantalla.blit(self.fuente_normal.render("Teto", True, (0,0,0)), (375, 310))
+            if self.gestor_puntuacion.total > 0:
+                self.pantalla.blit(self.fuente_normal.render(f"Último Puntaje: {self.gestor_puntuacion.total}", True, (0,0,0)), (180, 450))
+
+        elif self.estado_actual in ["MOSTRANDO_SECUENCIA", "JUGANDO"]:
+            self.pantalla.blit(self.fuente_normal.render(f"Puntaje: {self.gestor_puntuacion.total}", True, (0,0,0)), (20, 20))
+            self.pantalla.blit(self.fuente_normal.render(f"Tiempo: {max(0, self.t_restante):.1f}s", True, (0,0,0)), (20, 50))
+            self.pantalla.blit(self.fuente_normal.render(self.mensaje, True, (0,100,0)), (200, 20))
+            
+            for numero, rect in self.rects_botones.items():
+                color = self.colores_brillantes[numero] if self.color_iluminado == numero else self.colores_base[numero]
+                pygame.draw.rect(self.pantalla, color, rect)
+                pygame.draw.rect(self.pantalla, (0,0,0), rect, 3) # Borde negro
+
+            pygame.draw.rect(self.pantalla, (0,0,0), self.rect_reinicio)
+            self.pantalla.blit(self.fuente_normal.render("RESTART", True, (255,255,255)), (245, 560))
+
+        elif self.estado_actual == "GAME_OVER":
+            self.pantalla.blit(self.fuente_titulo.render("GAME OVER", True, (200,0,0)), (160, 200))
+            self.pantalla.blit(self.fuente_normal.render(f"Puntaje Final: {self.gestor_puntuacion.total}", True, (0,0,0)), (200, 300))
+            pygame.draw.rect(self.pantalla, (0,0,0), self.rect_reinicio)
+            self.pantalla.blit(self.fuente_normal.render("Volver", True, (255,255,255)), (260, 560))
