@@ -16,8 +16,34 @@ class App:
         self.personaje_actual = None
 
         pygame.font.init()
-        self.fuente_titulo = pygame.font.SysFont("Arial", 48, bold=True)
-        self.fuente_normal = pygame.font.SysFont("Arial", 24, bold=True)
+        self.fuente_titulo = pygame.font.Font(str(config.archivo_fuente), 48)
+        self.fuente_normal = pygame.font.Font(str(config.archivo_fuente), 24)
+
+        directorio_imagenes = config.directorio_base / "assets" / "images"
+        nombres_colores = {
+            1: "rojo",
+            2: "azul",
+            3: "verde",
+            4: "amarillo",
+        }
+        tamano_boton_juego = 300
+        self.imagenes_botones = {
+            numero: {
+                "normal": pygame.transform.smoothscale(
+                    pygame.image.load(
+                        directorio_imagenes / f"asset {nombre} final.png"
+                    ).convert_alpha(),
+                    (tamano_boton_juego, tamano_boton_juego),
+                ),
+                "presionado": pygame.transform.smoothscale(
+                    pygame.image.load(
+                        directorio_imagenes / f"asset {nombre} pressed final.png"
+                    ).convert_alpha(),
+                    (tamano_boton_juego, tamano_boton_juego),
+                ),
+            }
+            for numero, nombre in nombres_colores.items()
+        }
 
         self.estado_actual = "MENU" # MENU, SELECCION, MOSTRANDO_SECUENCIA, JUGANDO, GAME_OVER
         
@@ -35,18 +61,29 @@ class App:
             4: (255, 255, 50)
         }
         
+        centro_juego = self.pantalla.get_rect().center
+        inicio_juego_x = centro_juego[0] - 300
+        inicio_juego_y = centro_juego[1] - 300
         self.rects_botones = {
-            1: pygame.Rect(350, 150, 150, 150), # Rojo (Der. Arriba)
-            3: pygame.Rect(100, 150, 150, 150), # Verde (Izq. Arriba)
-            2: pygame.Rect(100, 350, 150, 150), # Azul (Izq. Abajo)
-            4: pygame.Rect(350, 350, 150, 150)  # Amarillo (Der. Abajo)
+            3: pygame.Rect(inicio_juego_x, inicio_juego_y, 300, 300), # Verde (Arriba izquierda)
+            2: pygame.Rect(inicio_juego_x + 300, inicio_juego_y, 300, 300), # Azul (Arriba derecha)
+            4: pygame.Rect(inicio_juego_x, inicio_juego_y + 300, 300, 300), # Amarillo (Abajo izquierda)
+            1: pygame.Rect(inicio_juego_x + 300, inicio_juego_y + 300, 300, 300), # Rojo (Abajo derecha)
         }
         
-        self.rect_miku = pygame.Rect(60, 250, 120, 50)
-        self.rect_teto = pygame.Rect(200, 250, 120, 50)
-        self.rect_neru = pygame.Rect(340, 250, 120, 50)
-        self.rect_gumi = pygame.Rect(480, 250, 120, 50)
-        self.rect_reinicio = pygame.Rect(200, 550, 200, 50)
+        centro_x = self.pantalla.get_rect().centerx
+        centro_y = self.pantalla.get_rect().centery
+        self.rect_iniciar = pygame.Rect(centro_x - 200, centro_y - 35, 400, 70)
+        ancho_boton_personaje = 140
+        espacio_boton_personaje = 20
+        ancho_grupo_personajes = (ancho_boton_personaje * 4) + (espacio_boton_personaje * 3)
+        inicio_x = centro_x - (ancho_grupo_personajes // 2)
+        y_botones_personaje = centro_y - 30
+        self.rect_miku = pygame.Rect(inicio_x, y_botones_personaje, ancho_boton_personaje, 60)
+        self.rect_teto = pygame.Rect(inicio_x + ancho_boton_personaje + espacio_boton_personaje, y_botones_personaje, ancho_boton_personaje, 60)
+        self.rect_neru = pygame.Rect(inicio_x + (ancho_boton_personaje + espacio_boton_personaje) * 2, y_botones_personaje, ancho_boton_personaje, 60)
+        self.rect_gumi = pygame.Rect(inicio_x + (ancho_boton_personaje + espacio_boton_personaje) * 3, y_botones_personaje, ancho_boton_personaje, 60)
+        self.rect_reinicio = pygame.Rect(self.pantalla.get_rect().right - 230, centro_y - 25, 200, 50)
 
         self.t_total = 10.0
         self.t_restante = 10.0
@@ -57,6 +94,8 @@ class App:
         self.indice_secuencia = 0
         self.tiempo_ultimo_cambio = 0
         self.luz_encendida = False
+        self.boton_presionado = None
+        self.tiempo_boton_presionado = 0
 
     def preparar_juego(self):
         self.gestor_secuencia.iniciar_juego()
@@ -110,6 +149,9 @@ class App:
 
             if self.estado_actual == "MOSTRANDO_SECUENCIA":
                 self.procesar_animacion()
+
+            if self.boton_presionado is not None and pygame.time.get_ticks() >= self.tiempo_boton_presionado:
+                self.boton_presionado = None
             
             self.dibujar()
             pygame.display.flip()
@@ -132,7 +174,8 @@ class App:
 
     def manejar_clic(self, pos):
         if self.estado_actual == "MENU":
-            self.estado_actual = "SELECCION"
+            if self.rect_iniciar.collidepoint(pos):
+                self.estado_actual = "SELECCION"
             
         elif self.estado_actual == "SELECCION":
             if self.rect_miku.collidepoint(pos):
@@ -153,6 +196,8 @@ class App:
             
             for numero, rect in self.rects_botones.items():
                 if rect.collidepoint(pos):
+                    self.boton_presionado = numero
+                    self.tiempo_boton_presionado = pygame.time.get_ticks() + 150
                     resultado = self.gestor_secuencia.verificar_color(numero)
                     if resultado == "ERROR":
                         if self.error_debe_penalizar():
@@ -185,40 +230,90 @@ class App:
                 self.gestor_puntuacion.reset()
                 self.estado_actual = "SELECCION"
 
+    def dibujar_texto_centrado(self, texto, fuente, color, centro):
+        superficie = fuente.render(texto, True, color)
+        rect_texto = superficie.get_rect(center=centro)
+        self.pantalla.blit(superficie, rect_texto)
+
+    def dibujar_boton(self, rect, texto, color_fondo=(255, 255, 255), color_texto=(0, 0, 0)):
+        pygame.draw.rect(self.pantalla, color_fondo, rect)
+        pygame.draw.rect(self.pantalla, (0, 0, 0), rect, 2)
+        self.dibujar_texto_centrado(texto, self.fuente_normal, color_texto, rect.center)
+
+    def dibujar_texto_lateral(self, texto, fuente, color, y, lado):
+        superficie = fuente.render(texto, True, color)
+        if lado == "izquierda":
+            rect_texto = superficie.get_rect(topleft=(30, y))
+        else:
+            rect_texto = superficie.get_rect(topright=(self.pantalla.get_rect().right - 30, y))
+        self.pantalla.blit(superficie, rect_texto)
+
     def dibujar(self):
         self.pantalla.fill((189, 189, 189))
         
         if self.estado_actual == "MENU":
-            self.pantalla.blit(self.fuente_titulo.render("SIMON GAME", True, (0,0,0)), (150, 200))
-            self.pantalla.blit(self.fuente_normal.render("Haz clic para iniciar", True, (50,50,50)), (200, 300))
+            centro_x = self.pantalla.get_rect().centerx
+            centro_y = self.pantalla.get_rect().centery
+            self.dibujar_texto_centrado("VoColoroid", self.fuente_titulo, (0, 0, 0), (centro_x, centro_y - 100))
+            self.dibujar_boton(self.rect_iniciar, "Haz clic para iniciar", (255, 255, 255), (50, 50, 50))
             
         elif self.estado_actual == "SELECCION":
-            self.pantalla.blit(self.fuente_titulo.render("ELEGIR PERSONAJE", True, (0,0,0)), (70, 100))
-            for rect in (self.rect_miku, self.rect_teto, self.rect_neru, self.rect_gumi):
-                pygame.draw.rect(self.pantalla, (255,255,255), rect)
-
-            self.pantalla.blit(self.fuente_normal.render("Miku", True, (0,0,0)), (95, 270))
-            self.pantalla.blit(self.fuente_normal.render("Teto", True, (0,0,0)), (235, 270))
-            self.pantalla.blit(self.fuente_normal.render("Neru", True, (0,0,0)), (375, 270))
-            self.pantalla.blit(self.fuente_normal.render("Gumi", True, (0,0,0)), (515, 270))
+            centro_x = self.pantalla.get_rect().centerx
+            centro_y = self.pantalla.get_rect().centery
+            self.dibujar_texto_centrado("ELEGIR PERSONAJE", self.fuente_titulo, (0, 0, 0), (centro_x, centro_y - 100))
+            for rect, nombre in (
+                (self.rect_miku, "Miku"),
+                (self.rect_teto, "Teto"),
+                (self.rect_neru, "Neru"),
+                (self.rect_gumi, "Gumi"),
+            ):
+                self.dibujar_boton(rect, nombre)
             if self.gestor_puntuacion.total > 0:
-                self.pantalla.blit(self.fuente_normal.render(f"Último Puntaje: {self.gestor_puntuacion.total}", True, (0,0,0)), (180, 450))
+                self.dibujar_texto_lateral(
+                    f"Último Puntaje: {self.gestor_puntuacion.total}",
+                    self.fuente_normal,
+                    (0, 0, 0),
+                    centro_y + 100,
+                    "izquierda",
+                )
 
         elif self.estado_actual in ["MOSTRANDO_SECUENCIA", "JUGANDO"]:
-            self.pantalla.blit(self.fuente_normal.render(f"Puntaje: {self.gestor_puntuacion.total}", True, (0,0,0)), (20, 20))
-            self.pantalla.blit(self.fuente_normal.render(f"Tiempo: {max(0, self.t_restante):.1f}s", True, (0,0,0)), (20, 50))
-            self.pantalla.blit(self.fuente_normal.render(self.mensaje, True, (0,100,0)), (200, 20))
+            self.dibujar_texto_lateral(
+                f"Puntaje: {self.gestor_puntuacion.total}",
+                self.fuente_normal,
+                (0, 0, 0),
+                30,
+                "izquierda",
+            )
+            self.dibujar_texto_lateral(
+                f"Tiempo: {max(0, self.t_restante):.1f}s",
+                self.fuente_normal,
+                (0, 0, 0),
+                65,
+                "izquierda",
+            )
+            self.dibujar_texto_lateral(self.mensaje, self.fuente_normal, (0, 100, 0), 30, "derecha")
             
             for numero, rect in self.rects_botones.items():
-                color = self.colores_brillantes[numero] if self.color_iluminado == numero else self.colores_base[numero]
-                pygame.draw.rect(self.pantalla, color, rect)
-                pygame.draw.rect(self.pantalla, (0,0,0), rect, 3) # Borde negro
+                esta_presionado = (
+                    self.color_iluminado == numero
+                    or self.boton_presionado == numero
+                )
+                tipo_imagen = "presionado" if esta_presionado else "normal"
+                self.pantalla.blit(self.imagenes_botones[numero][tipo_imagen], rect)
 
             pygame.draw.rect(self.pantalla, (0,0,0), self.rect_reinicio)
-            self.pantalla.blit(self.fuente_normal.render("RESTART", True, (255,255,255)), (245, 560))
+            self.dibujar_texto_centrado("RESTART", self.fuente_normal, (255, 255, 255), self.rect_reinicio.center)
 
         elif self.estado_actual == "GAME_OVER":
-            self.pantalla.blit(self.fuente_titulo.render("GAME OVER", True, (200,0,0)), (160, 200))
-            self.pantalla.blit(self.fuente_normal.render(f"Puntaje Final: {self.gestor_puntuacion.total}", True, (0,0,0)), (200, 300))
+            centro_x = self.pantalla.get_rect().centerx
+            self.dibujar_texto_centrado("GAME OVER", self.fuente_titulo, (200, 0, 0), (centro_x, 200))
+            self.dibujar_texto_lateral(
+                f"Puntaje Final: {self.gestor_puntuacion.total}",
+                self.fuente_normal,
+                (0, 0, 0),
+                300,
+                "derecha",
+            )
             pygame.draw.rect(self.pantalla, (0,0,0), self.rect_reinicio)
-            self.pantalla.blit(self.fuente_normal.render("Volver", True, (255,255,255)), (260, 560))
+            self.dibujar_texto_centrado("Volver", self.fuente_normal, (255, 255, 255), self.rect_reinicio.center)
