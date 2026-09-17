@@ -16,8 +16,9 @@ class App:
         self.personaje_actual = None
 
         pygame.font.init()
-        self.fuente_titulo = pygame.font.SysFont("Arial", 48, bold=True)
-        self.fuente_normal = pygame.font.SysFont("Arial", 24, bold=True)
+        self.fuente_nombre_juego = pygame.font.Font(config.archivo_fuente, 64)
+        self.fuente_titulo = pygame.font.Font(config.archivo_fuente, 48)
+        self.fuente_normal = pygame.font.Font(config.archivo_fuente, 24)
 
         self.estado_actual = "MENU" # MENU, SELECCION, MOSTRANDO_SECUENCIA, JUGANDO, GAME_OVER
         
@@ -42,8 +43,21 @@ class App:
             4: pygame.Rect(350, 350, 150, 150)  # Amarillo (Der. Abajo)
         }
         
-        self.rect_miku = pygame.Rect(150, 300, 100, 50)
-        self.rect_teto = pygame.Rect(350, 300, 100, 50)
+        centro_x = self.pantalla.get_rect().centerx
+        centro_y = self.pantalla.get_rect().centery
+        separacion_personajes = 40
+        ancho_boton_personaje = 100
+        ancho_grupo_personajes = (ancho_boton_personaje * 2) + separacion_personajes
+        inicio_grupo_personajes = centro_x - (ancho_grupo_personajes // 2)
+        self.rect_miku = pygame.Rect(
+            inicio_grupo_personajes, centro_y - 25, ancho_boton_personaje, 50
+        )
+        self.rect_teto = pygame.Rect(
+            self.rect_miku.right + separacion_personajes,
+            centro_y - 25,
+            ancho_boton_personaje,
+            50,
+        )
         self.rect_reinicio = pygame.Rect(200, 550, 200, 50)
 
         self.t_total = 10.0
@@ -161,17 +175,32 @@ class App:
         self.pantalla.fill((189, 189, 189))
         
         if self.estado_actual == "MENU":
-            self.pantalla.blit(self.fuente_titulo.render("SIMON GAME", True, (0,0,0)), (150, 200))
-            self.pantalla.blit(self.fuente_normal.render("Haz clic para iniciar", True, (50,50,50)), (200, 300))
+            centro_x = self.pantalla.get_rect().centerx
+            titulo = self.fuente_titulo.render("VoColoroid", True, (0, 0, 0))
+            indicacion = self.fuente_normal.render("Haz clic para iniciar", True, (50, 50, 50))
+
+            self.pantalla.blit(titulo, titulo.get_rect(center=(centro_x, 280)))
+            self.pantalla.blit(indicacion, indicacion.get_rect(center=(centro_x, 360)))
             
         elif self.estado_actual == "SELECCION":
-            self.pantalla.blit(self.fuente_titulo.render("ELEGIR PERSONAJE", True, (0,0,0)), (70, 100))
+            centro_x = self.pantalla.get_rect().centerx
+            centro_y = self.pantalla.get_rect().centery
+            titulo = self.fuente_titulo.render("ELEGIR PERSONAJE", True, (0,0,0))
+            self.pantalla.blit(titulo, titulo.get_rect(center=(centro_x, centro_y - 120)))
             pygame.draw.rect(self.pantalla, (255,255,255), self.rect_miku)
             pygame.draw.rect(self.pantalla, (255,255,255), self.rect_teto)
-            self.pantalla.blit(self.fuente_normal.render("Miku", True, (0,0,0)), (175, 310))
-            self.pantalla.blit(self.fuente_normal.render("Teto", True, (0,0,0)), (375, 310))
+            texto_miku = self.fuente_normal.render("Miku", True, (0,0,0))
+            texto_teto = self.fuente_normal.render("Teto", True, (0,0,0))
+            self.pantalla.blit(texto_miku, texto_miku.get_rect(center=self.rect_miku.center))
+            self.pantalla.blit(texto_teto, texto_teto.get_rect(center=self.rect_teto.center))
             if self.gestor_puntuacion.total > 0:
-                self.pantalla.blit(self.fuente_normal.render(f"Último Puntaje: {self.gestor_puntuacion.total}", True, (0,0,0)), (180, 450))
+                ultimo_puntaje = self.fuente_normal.render(
+                    f"Último Puntaje: {self.gestor_puntuacion.total}", True, (0,0,0)
+                )
+                self.pantalla.blit(
+                    ultimo_puntaje,
+                    ultimo_puntaje.get_rect(center=(centro_x, centro_y + 100)),
+                )
 
         elif self.estado_actual in ["MOSTRANDO_SECUENCIA", "JUGANDO"]:
             self.pantalla.blit(self.fuente_normal.render(f"Puntaje: {self.gestor_puntuacion.total}", True, (0,0,0)), (20, 20))
