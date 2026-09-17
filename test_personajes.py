@@ -1,6 +1,7 @@
 import unittest
 
-from personajes import Miku, Teto
+from app import App
+from personajes import Miku, Teto, Neru
 from score import GestorPuntuacion
 
 
@@ -34,6 +35,18 @@ class PersonajesTests(unittest.TestCase):
         puntos = gestor.agregar_por_ronda(5.0, 1, teto.multiplicador_puntaje)
 
         self.assertEqual(puntos, 825)
+
+    def test_neru_bloquea_el_primer_error(self):
+        app = object.__new__(App)
+        app.personaje_actual = Neru()
+        app.bloquear_penalizacion = True
+        app.primer_error_protegido = True
+        app.t_restante = 10.0
+        app.mensaje = "Listo"
+
+        self.assertFalse(app.error_debe_penalizar())
+        self.assertFalse(getattr(app, "bloquear_penalizacion", False))
+        self.assertEqual(app.t_restante, 10.0)
 
 
 if __name__ == "__main__":
