@@ -1,3 +1,4 @@
+import math
 import pygame
 from score import GestorPuntuacion
 from funtions import GestorSecuencia
@@ -70,6 +71,7 @@ class App:
             4: pygame.Rect(inicio_juego_x, inicio_juego_y + 300, 300, 300), # Amarillo (Abajo izquierda)
             1: pygame.Rect(inicio_juego_x + 300, inicio_juego_y + 300, 300, 300), # Rojo (Abajo derecha)
         }
+        self.estrellita = self.crear_estrellita(84)
         
         centro_x = self.pantalla.get_rect().centerx
         centro_y = self.pantalla.get_rect().centery
@@ -284,6 +286,21 @@ class App:
             rect_texto = superficie.get_rect(topright=(self.pantalla.get_rect().right - 30, y))
         self.pantalla.blit(superficie, rect_texto)
 
+    def crear_estrellita(self, tamano):
+        superficie = pygame.Surface((tamano, tamano), pygame.SRCALPHA)
+        centro = tamano / 2
+        puntos = []
+        for indice in range(10):
+            angulo = math.radians(-90 + indice * 36)
+            radio = tamano * (0.48 if indice % 2 == 0 else 0.21)
+            puntos.append((centro + math.cos(angulo) * radio, centro + math.sin(angulo) * radio))
+        pygame.draw.polygon(superficie, (255, 255, 255, 255), puntos)
+        return superficie
+
+    def dibujar_estrellita(self):
+        rect_estrella = self.estrellita.get_rect(center=self.pantalla.get_rect().center)
+        self.pantalla.blit(self.estrellita, rect_estrella)
+
     def dibujar_transicion_nivel(self):
         tiempo_transcurrido = (pygame.time.get_ticks() - self.tiempo_transicion_nivel) / 1000
         panel = pygame.Surface((460, 190), pygame.SRCALPHA)
@@ -358,6 +375,7 @@ class App:
                 )
                 tipo_imagen = "presionado" if esta_presionado else "normal"
                 self.pantalla.blit(self.imagenes_botones[numero][tipo_imagen], rect)
+            self.dibujar_estrellita()
 
             pygame.draw.rect(self.pantalla, (0,0,0), self.rect_reinicio)
             self.dibujar_texto_centrado("REINICIAR", self.fuente_normal, (255, 255, 255), self.rect_reinicio.center)
@@ -368,12 +386,14 @@ class App:
             for numero, rect in self.rects_botones.items():
                 tipo_imagen = "presionado" if self.color_iluminado == numero else "normal"
                 self.pantalla.blit(self.imagenes_botones[numero][tipo_imagen], rect)
+            self.dibujar_estrellita()
             self.dibujar_transicion_nivel()
 
         elif self.estado_actual == "ESPERANDO_TRANSICION":
             for numero, rect in self.rects_botones.items():
                 tipo_imagen = "presionado" if self.boton_presionado == numero else "normal"
                 self.pantalla.blit(self.imagenes_botones[numero][tipo_imagen], rect)
+            self.dibujar_estrellita()
 
         elif self.estado_actual == "GAME_OVER":
             centro_x = self.pantalla.get_rect().centerx
