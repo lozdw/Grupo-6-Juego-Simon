@@ -67,7 +67,6 @@ class App:
             }
             for numero, nombre in nombres_colores.items()
         }
-
         self.logo_intro = pygame.image.load(directorio_imagenes / "logo.jpeg").convert_alpha()
         self.logo_intro = pygame.transform.smoothscale(self.logo_intro, (420, 420))
         self.rect_logo_intro = self.logo_intro.get_rect(center=self.pantalla.get_rect().center)
