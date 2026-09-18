@@ -34,7 +34,7 @@ class PersonajesTests(unittest.TestCase):
         teto.aplicar_habilidad(estado)
         puntos = gestor.agregar_por_ronda(5.0, 1, teto.multiplicador_puntaje)
 
-        self.assertEqual(puntos, 825)
+        self.assertEqual(puntos, 1100)
 
     def test_neru_bloquea_el_primer_error(self):
         app = object.__new__(App)

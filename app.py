@@ -71,6 +71,35 @@ class App:
         self.logo_intro = pygame.transform.smoothscale(self.logo_intro, (420, 420))
         self.rect_logo_intro = self.logo_intro.get_rect(center=self.pantalla.get_rect().center)
 
+        tamano_imagen_personaje = 170
+        nombres_imagenes_personajes = {
+            "Miku": "Miku Pixel Cabeza.png",
+            "Teto": "Teto Pixel Cabeza.png",
+            "Neru": "Neru Pixel Cabeza .png",
+            "Gumi": "Gumi Pixel Cabeza.png",
+        }
+        self.imagenes_personajes = {
+            nombre: pygame.transform.smoothscale(
+                pygame.image.load(directorio_imagenes / archivo).convert_alpha(),
+                (tamano_imagen_personaje, tamano_imagen_personaje),
+            )
+            for nombre, archivo in nombres_imagenes_personajes.items()
+        }
+        imagen_marcos_tiempo = pygame.image.load(
+            directorio_imagenes / "barras de tiempo.png"
+        ).convert_alpha()
+        tamano_barra_tiempo = (600, 35)
+        self.marcos_barra_tiempo = {
+            "normal": pygame.transform.smoothscale(
+                imagen_marcos_tiempo.subsurface(pygame.Rect(12, 15, 185, 22)),
+                tamano_barra_tiempo,
+            ),
+            "escudo": pygame.transform.smoothscale(
+                imagen_marcos_tiempo.subsurface(pygame.Rect(12, 57, 185, 22)),
+                tamano_barra_tiempo,
+            ),
+        }
+
         self.estado_actual = "INTRO" # INTRO, MENU, SELECCION, TRANSICION_NIVEL, MOSTRANDO_SECUENCIA, JUGANDO, GAME_OVER
         self.tiempo_inicio_intro = pygame.time.get_ticks()
         
@@ -97,20 +126,40 @@ class App:
             4: pygame.Rect(inicio_juego_x, inicio_juego_y + 300, 300, 300), # Amarillo (Abajo izquierda)
             1: pygame.Rect(inicio_juego_x + 300, inicio_juego_y + 300, 300, 300), # Rojo (Abajo derecha)
         }
+        self.rect_barra_tiempo = pygame.Rect(
+            self.pantalla.get_rect().centerx - tamano_barra_tiempo[0] // 2,
+            self.rects_botones[4].bottom + 10,
+            *tamano_barra_tiempo,
+        )
         self.estrellita = self.crear_estrellita(84)
         
         centro_x = self.pantalla.get_rect().centerx
         centro_y = self.pantalla.get_rect().centery
         self.rect_iniciar = pygame.Rect(centro_x - 200, centro_y - 35, 400, 70)
-        ancho_boton_personaje = 140
-        espacio_boton_personaje = 20
-        ancho_grupo_personajes = (ancho_boton_personaje * 4) + (espacio_boton_personaje * 3)
-        inicio_x = centro_x - (ancho_grupo_personajes // 2)
-        y_botones_personaje = centro_y - 30
-        self.rect_miku = pygame.Rect(inicio_x, y_botones_personaje, ancho_boton_personaje, 60)
-        self.rect_teto = pygame.Rect(inicio_x + ancho_boton_personaje + espacio_boton_personaje, y_botones_personaje, ancho_boton_personaje, 60)
-        self.rect_neru = pygame.Rect(inicio_x + (ancho_boton_personaje + espacio_boton_personaje) * 2, y_botones_personaje, ancho_boton_personaje, 60)
-        self.rect_gumi = pygame.Rect(inicio_x + (ancho_boton_personaje + espacio_boton_personaje) * 3, y_botones_personaje, ancho_boton_personaje, 60)
+        ancho_boton_personaje = 230
+        alto_boton_personaje = 230
+        espacio_boton_personaje = 30
+        inicio_x = centro_x - ((ancho_boton_personaje * 2 + espacio_boton_personaje) // 2)
+        inicio_y = centro_y - 230
+        self.rect_miku = pygame.Rect(inicio_x, inicio_y, ancho_boton_personaje, alto_boton_personaje)
+        self.rect_teto = pygame.Rect(
+            inicio_x + ancho_boton_personaje + espacio_boton_personaje,
+            inicio_y,
+            ancho_boton_personaje,
+            alto_boton_personaje,
+        )
+        self.rect_neru = pygame.Rect(
+            inicio_x,
+            inicio_y + alto_boton_personaje + espacio_boton_personaje,
+            ancho_boton_personaje,
+            alto_boton_personaje,
+        )
+        self.rect_gumi = pygame.Rect(
+            inicio_x + ancho_boton_personaje + espacio_boton_personaje,
+            inicio_y + alto_boton_personaje + espacio_boton_personaje,
+            ancho_boton_personaje,
+            alto_boton_personaje,
+        )
         posicion_lateral_x = self.pantalla.get_rect().right - 230
         self.rect_reinicio = pygame.Rect(posicion_lateral_x, centro_y - 55, 200, 50)
         self.rect_volver = pygame.Rect(posicion_lateral_x, centro_y + 5, 200, 50)
@@ -128,6 +177,7 @@ class App:
         self.tiempo_boton_presionado = 0
         self.tiempo_espera_transicion = 0
         self.tiempo_transicion_nivel = 0
+        self.pulsos_por_segundo_personaje = 180 / 60
 
     def preparar_juego(self):
         self.gestor_secuencia.iniciar_juego()
@@ -332,6 +382,13 @@ class App:
         pygame.draw.rect(self.pantalla, (0, 0, 0), rect, 2)
         self.dibujar_texto_centrado(texto, self.fuente_normal, color_texto, rect.center)
 
+    def dibujar_personaje(self, rect, nombre):
+        pygame.draw.rect(self.pantalla, (255, 255, 255), rect)
+        pygame.draw.rect(self.pantalla, (0, 0, 0), rect, 2)
+        imagen = self.imagenes_personajes[nombre]
+        self.pantalla.blit(imagen, imagen.get_rect(center=(rect.centerx, rect.top + 95)))
+        self.dibujar_texto_centrado(nombre, self.fuente_normal, (0, 0, 0), (rect.centerx, rect.bottom - 28))
+
     def dibujar_texto_lateral(self, texto, fuente, color, y, lado):
         superficie = fuente.render(texto, True, color)
         if lado == "izquierda":
@@ -354,6 +411,39 @@ class App:
     def dibujar_estrellita(self):
         rect_estrella = self.estrellita.get_rect(center=self.pantalla.get_rect().center)
         self.pantalla.blit(self.estrellita, rect_estrella)
+
+    def dibujar_personaje_jugando(self):
+        if self.personaje_actual is None:
+            return
+
+        imagen = self.imagenes_personajes[self.personaje_actual.nombre]
+        imagen = pygame.transform.smoothscale(imagen, (144, 144))
+        tiempo_pulso = 1000 / self.pulsos_por_segundo_personaje
+        indice_pulso = int(pygame.time.get_ticks() / tiempo_pulso)
+        angulos_animacion = (45, 0, -45, 0)
+        angulo = angulos_animacion[indice_pulso % len(angulos_animacion)]
+        imagen_inclinada = pygame.transform.rotate(imagen, angulo)
+        rect_imagen = imagen_inclinada.get_rect(center=(85, 190))
+        self.pantalla.blit(imagen_inclinada, rect_imagen)
+
+    def dibujar_barra_tiempo(self):
+        tiempo_total = max(0.0, float(self.t_total))
+        tiempo_restante = max(0.0, float(self.t_restante))
+        progreso = min(1.0, tiempo_restante / tiempo_total) if tiempo_total else 0.0
+        marco_escudo_disponible = (
+            self.personaje_actual is not None
+            and self.personaje_actual.nombre == "Neru"
+            and (
+                not self.personaje_actual.habilidad_aplicada
+                or self.personaje_actual.escudo_activo
+            )
+        )
+        nombre_marco = "escudo" if marco_escudo_disponible else "normal"
+        rect_relleno = self.rect_barra_tiempo.inflate(-32, -14)
+        rect_relleno.width = round(rect_relleno.width * progreso)
+        color_relleno = (241, 251, 164) if marco_escudo_disponible else (98, 149, 232)
+        pygame.draw.rect(self.pantalla, color_relleno, rect_relleno)
+        self.pantalla.blit(self.marcos_barra_tiempo[nombre_marco], self.rect_barra_tiempo)
 
     def dibujar_transicion_nivel(self):
         tiempo_transcurrido = (pygame.time.get_ticks() - self.tiempo_transicion_nivel) / 1000
@@ -401,14 +491,14 @@ class App:
         elif self.estado_actual == "SELECCION":
             centro_x = self.pantalla.get_rect().centerx
             centro_y = self.pantalla.get_rect().centery
-            self.dibujar_texto_centrado("ELEGIR PERSONAJE", self.fuente_titulo, (0, 0, 0), (centro_x, centro_y - 100))
+            self.dibujar_texto_centrado("ELEGIR PERSONAJE", self.fuente_titulo, (0, 0, 0), (centro_x, 55))
             for rect, nombre in (
                 (self.rect_miku, "Miku"),
                 (self.rect_teto, "Teto"),
                 (self.rect_neru, "Neru"),
                 (self.rect_gumi, "Gumi"),
             ):
-                self.dibujar_boton(rect, nombre)
+                self.dibujar_personaje(rect, nombre)
             if self.gestor_puntuacion.total > 0:
                 limite_inferior_botones = max(
                     rect.bottom for rect in (self.rect_miku, self.rect_teto, self.rect_neru, self.rect_gumi)
@@ -445,6 +535,9 @@ class App:
                 tipo_imagen = "presionado" if esta_presionado else "normal"
                 self.pantalla.blit(self.imagenes_botones[numero][tipo_imagen], rect)
             self.dibujar_estrellita()
+            self.dibujar_barra_tiempo()
+            if self.estado_actual == "JUGANDO":
+                self.dibujar_personaje_jugando()
 
             pygame.draw.rect(self.pantalla, (0,0,0), self.rect_reinicio)
             self.dibujar_texto_centrado("REINICIAR", self.fuente_normal, (255, 255, 255), self.rect_reinicio.center)

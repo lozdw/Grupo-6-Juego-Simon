@@ -74,10 +74,10 @@ class Miku(Personaje):
 
 class Teto(Personaje):
     def __init__(self):
-        super().__init__("Teto", multiplicador=1.5)
+        super().__init__("Teto", multiplicador=2.0)
 
     def _aplicar_habilidad(self, estado_juego):
-        self.multiplicador_puntaje = 1.5
+        self.multiplicador_puntaje = 2.0
 
 
 class Neru(Personaje):
