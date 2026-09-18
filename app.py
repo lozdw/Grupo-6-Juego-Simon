@@ -25,6 +25,22 @@ class App:
             pygame.mixer.music.set_volume(0.1)
             pygame.mixer.music.play(-1)
             self.musica_reproduciendose = True
+        self.sonido_boton_rojo = None
+        if pygame.mixer.get_init() and config.archivo_sonido_rojo.exists():
+            self.sonido_boton_rojo = pygame.mixer.Sound(str(config.archivo_sonido_rojo))
+            self.sonido_boton_rojo.set_volume(0.1)
+        self.sonido_boton_azul = None
+        if pygame.mixer.get_init() and config.archivo_sonido_azul.exists():
+            self.sonido_boton_azul = pygame.mixer.Sound(str(config.archivo_sonido_azul))
+            self.sonido_boton_azul.set_volume(0.3)
+        self.sonido_boton_verde = None
+        if pygame.mixer.get_init() and config.archivo_sonido_verde.exists():
+            self.sonido_boton_verde = pygame.mixer.Sound(str(config.archivo_sonido_verde))
+            self.sonido_boton_verde.set_volume(0.3)
+        self.sonido_boton_amarillo = None
+        if pygame.mixer.get_init() and config.archivo_sonido_amarillo.exists():
+            self.sonido_boton_amarillo = pygame.mixer.Sound(str(config.archivo_sonido_amarillo))
+            self.sonido_boton_amarillo.set_volume(0.3)
 
         directorio_imagenes = config.directorio_base / "assets" / "images"
         nombres_colores = {
@@ -159,6 +175,14 @@ class App:
             if not self.luz_encendida:
                 if self.indice_secuencia < len(self.gestor_secuencia.colores_secuencia):
                     self.color_iluminado = self.gestor_secuencia.colores_secuencia[self.indice_secuencia]
+                    if self.color_iluminado == 1 and self.sonido_boton_rojo is not None:
+                        self.sonido_boton_rojo.play()
+                    elif self.color_iluminado == 2 and self.sonido_boton_azul is not None:
+                        self.sonido_boton_azul.play()
+                    elif self.color_iluminado == 3 and self.sonido_boton_verde is not None:
+                        self.sonido_boton_verde.play()
+                    elif self.color_iluminado == 4 and self.sonido_boton_amarillo is not None:
+                        self.sonido_boton_amarillo.play()
                     self.luz_encendida = True
                 else:
                     self.color_iluminado = None
@@ -246,6 +270,14 @@ class App:
                 if rect.collidepoint(pos):
                     self.boton_presionado = numero
                     self.tiempo_boton_presionado = pygame.time.get_ticks() + 150
+                    if numero == 1 and self.sonido_boton_rojo is not None:
+                        self.sonido_boton_rojo.play()
+                    elif numero == 2 and self.sonido_boton_azul is not None:
+                        self.sonido_boton_azul.play()
+                    elif numero == 3 and self.sonido_boton_verde is not None:
+                        self.sonido_boton_verde.play()
+                    elif numero == 4 and self.sonido_boton_amarillo is not None:
+                        self.sonido_boton_amarillo.play()
                     resultado = self.gestor_secuencia.verificar_color(numero)
                     if resultado == "ERROR":
                         if self.error_debe_penalizar():
