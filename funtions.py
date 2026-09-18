@@ -33,11 +33,14 @@ class GestorSecuencia:
         self.colores_secuencia.clear()
         self.colores_ingresados.clear()
 
+    def calcular_longitud_secuencia(self):
+        nivel = self.consultar_nivel()
+        return max(1, (nivel + 1) // 2)
+
     def iniciar_juego(self):
         self.colores_secuencia.clear()
         self.colores_ingresados.clear()
-        valor_nivel = self.consultar_nivel()
-        for _ in range(valor_nivel):
+        for _ in range(self.calcular_longitud_secuencia()):
             self.colores_secuencia.append(randint(1, 4))
         return self.colores_secuencia
 

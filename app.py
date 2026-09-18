@@ -83,7 +83,9 @@ class App:
         self.rect_teto = pygame.Rect(inicio_x + ancho_boton_personaje + espacio_boton_personaje, y_botones_personaje, ancho_boton_personaje, 60)
         self.rect_neru = pygame.Rect(inicio_x + (ancho_boton_personaje + espacio_boton_personaje) * 2, y_botones_personaje, ancho_boton_personaje, 60)
         self.rect_gumi = pygame.Rect(inicio_x + (ancho_boton_personaje + espacio_boton_personaje) * 3, y_botones_personaje, ancho_boton_personaje, 60)
-        self.rect_reinicio = pygame.Rect(self.pantalla.get_rect().right - 230, centro_y - 25, 200, 50)
+        posicion_lateral_x = self.pantalla.get_rect().right - 230
+        self.rect_reinicio = pygame.Rect(posicion_lateral_x, centro_y - 55, 200, 50)
+        self.rect_volver = pygame.Rect(posicion_lateral_x, centro_y + 5, 200, 50)
 
         self.t_total = 10.0
         self.t_restante = 10.0
@@ -96,6 +98,7 @@ class App:
         self.luz_encendida = False
         self.boton_presionado = None
         self.tiempo_boton_presionado = 0
+        self.tiempo_espera_transicion = 0
         self.tiempo_transicion_nivel = 0
 
     def preparar_juego(self):
@@ -116,6 +119,14 @@ class App:
     def iniciar_transicion_nivel(self):
         self.estado_actual = "TRANSICION_NIVEL"
         self.tiempo_transicion_nivel = pygame.time.get_ticks()
+
+    def iniciar_espera_transicion(self):
+        self.estado_actual = "ESPERANDO_TRANSICION"
+        self.tiempo_espera_transicion = pygame.time.get_ticks() + 150
+
+    def procesar_espera_transicion(self):
+        if pygame.time.get_ticks() >= self.tiempo_espera_transicion:
+            self.iniciar_transicion_nivel()
 
     def procesar_transicion_nivel(self):
         tiempo_transcurrido = (pygame.time.get_ticks() - self.tiempo_transicion_nivel) / 1000
@@ -145,6 +156,7 @@ class App:
             
             for evento in pygame.event.get():
                 if evento.type == pygame.QUIT:
+                    self.gestor_secuencia.reiniciar_progreso()
                     self.ejecutando = False
                 
                 if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
@@ -162,6 +174,9 @@ class App:
 
             if self.estado_actual == "TRANSICION_NIVEL":
                 self.procesar_transicion_nivel()
+
+            if self.estado_actual == "ESPERANDO_TRANSICION":
+                self.procesar_espera_transicion()
 
             if self.boton_presionado is not None and pygame.time.get_ticks() >= self.tiempo_boton_presionado:
                 self.boton_presionado = None
@@ -230,18 +245,26 @@ class App:
                             self.personaje_actual.multiplicador_puntaje
                         )
                         self.mensaje = "¡¡Siguiente nivel!!"
-                        self.iniciar_transicion_nivel()
+                        self.iniciar_espera_transicion()
                     break
 
             if self.rect_reinicio.collidepoint(pos):
                 self.gestor_secuencia.reiniciar_progreso()
                 self.estado_actual = "SELECCION"
+            elif self.rect_volver.collidepoint(pos):
+                self.gestor_secuencia.reiniciar_progreso()
+                self.gestor_puntuacion.reset()
+                self.estado_actual = "MENU"
 
         elif self.estado_actual == "GAME_OVER":
             if self.rect_reinicio.collidepoint(pos):
                 self.gestor_secuencia.reiniciar_progreso()
                 self.gestor_puntuacion.reset()
                 self.estado_actual = "SELECCION"
+            elif self.rect_volver.collidepoint(pos):
+                self.gestor_secuencia.reiniciar_progreso()
+                self.gestor_puntuacion.reset()
+                self.estado_actual = "MENU"
 
     def dibujar_texto_centrado(self, texto, fuente, color, centro):
         superficie = fuente.render(texto, True, color)
@@ -301,12 +324,14 @@ class App:
             ):
                 self.dibujar_boton(rect, nombre)
             if self.gestor_puntuacion.total > 0:
-                self.dibujar_texto_lateral(
+                limite_inferior_botones = max(
+                    rect.bottom for rect in (self.rect_miku, self.rect_teto, self.rect_neru, self.rect_gumi)
+                )
+                self.dibujar_texto_centrado(
                     f"Último Puntaje: {self.gestor_puntuacion.total}",
                     self.fuente_normal,
                     (0, 0, 0),
-                    centro_y + 100,
-                    "izquierda",
+                    (centro_x, limite_inferior_botones + 60),
                 )
 
         elif self.estado_actual in ["MOSTRANDO_SECUENCIA", "JUGANDO"]:
@@ -335,13 +360,20 @@ class App:
                 self.pantalla.blit(self.imagenes_botones[numero][tipo_imagen], rect)
 
             pygame.draw.rect(self.pantalla, (0,0,0), self.rect_reinicio)
-            self.dibujar_texto_centrado("RESTART", self.fuente_normal, (255, 255, 255), self.rect_reinicio.center)
+            self.dibujar_texto_centrado("REINICIAR", self.fuente_normal, (255, 255, 255), self.rect_reinicio.center)
+            pygame.draw.rect(self.pantalla, (0,0,0), self.rect_volver)
+            self.dibujar_texto_centrado("VOLVER", self.fuente_normal, (255, 255, 255), self.rect_volver.center)
 
         elif self.estado_actual == "TRANSICION_NIVEL":
             for numero, rect in self.rects_botones.items():
                 tipo_imagen = "presionado" if self.color_iluminado == numero else "normal"
                 self.pantalla.blit(self.imagenes_botones[numero][tipo_imagen], rect)
             self.dibujar_transicion_nivel()
+
+        elif self.estado_actual == "ESPERANDO_TRANSICION":
+            for numero, rect in self.rects_botones.items():
+                tipo_imagen = "presionado" if self.boton_presionado == numero else "normal"
+                self.pantalla.blit(self.imagenes_botones[numero][tipo_imagen], rect)
 
         elif self.estado_actual == "GAME_OVER":
             centro_x = self.pantalla.get_rect().centerx
@@ -354,4 +386,6 @@ class App:
                 "derecha",
             )
             pygame.draw.rect(self.pantalla, (0,0,0), self.rect_reinicio)
-            self.dibujar_texto_centrado("Volver", self.fuente_normal, (255, 255, 255), self.rect_reinicio.center)
+            self.dibujar_texto_centrado("REINICIAR", self.fuente_normal, (255, 255, 255), self.rect_reinicio.center)
+            pygame.draw.rect(self.pantalla, (0,0,0), self.rect_volver)
+            self.dibujar_texto_centrado("VOLVER", self.fuente_normal, (255, 255, 255), self.rect_volver.center)
