@@ -86,17 +86,34 @@ class App:
             for nombre, archivo in nombres_imagenes_personajes.items()
         }
         imagen_marcos_tiempo = pygame.image.load(
-            directorio_imagenes / "barras de tiempo.png"
+            directorio_imagenes / "Barras de tiempo.png"
         ).convert_alpha()
-        tamano_barra_tiempo = (600, 35)
+        tamanos_marcos_tiempo = {
+            "normal": (500, 44),
+            "escudo": (500, 44),
+        }
+        alto_mitad_marcos = imagen_marcos_tiempo.get_height() // 2
+        marcos_originales = (
+            imagen_marcos_tiempo.subsurface(
+                pygame.Rect(0, 0, imagen_marcos_tiempo.get_width(), alto_mitad_marcos)
+            ),
+            imagen_marcos_tiempo.subsurface(
+                pygame.Rect(
+                    0,
+                    alto_mitad_marcos,
+                    imagen_marcos_tiempo.get_width(),
+                    imagen_marcos_tiempo.get_height() - alto_mitad_marcos,
+                )
+            ),
+        )
         self.marcos_barra_tiempo = {
             "normal": pygame.transform.smoothscale(
-                imagen_marcos_tiempo.subsurface(pygame.Rect(12, 15, 185, 22)),
-                tamano_barra_tiempo,
+                marcos_originales[0].subsurface(marcos_originales[0].get_bounding_rect()),
+                tamanos_marcos_tiempo["normal"],
             ),
             "escudo": pygame.transform.smoothscale(
-                imagen_marcos_tiempo.subsurface(pygame.Rect(12, 57, 185, 22)),
-                tamano_barra_tiempo,
+                marcos_originales[1].subsurface(marcos_originales[1].get_bounding_rect()),
+                tamanos_marcos_tiempo["escudo"],
             ),
         }
 
@@ -127,9 +144,14 @@ class App:
             1: pygame.Rect(inicio_juego_x + 300, inicio_juego_y + 300, 300, 300), # Rojo (Abajo derecha)
         }
         self.rect_barra_tiempo = pygame.Rect(
-            self.pantalla.get_rect().centerx - tamano_barra_tiempo[0] // 2,
+            self.pantalla.get_rect().centerx - tamanos_marcos_tiempo["normal"][0] // 2,
             self.rects_botones[4].bottom + 10,
-            *tamano_barra_tiempo,
+            *tamanos_marcos_tiempo["normal"],
+        )
+        self.rect_barra_tiempo_escudo = pygame.Rect(
+            self.rect_barra_tiempo.left,
+            self.rect_barra_tiempo.top,
+            *tamanos_marcos_tiempo["escudo"],
         )
         self.estrellita = self.crear_estrellita(84)
         
@@ -439,11 +461,20 @@ class App:
             )
         )
         nombre_marco = "escudo" if marco_escudo_disponible else "normal"
-        rect_relleno = self.rect_barra_tiempo.inflate(-32, -14)
+        rect_marco = (
+            self.rect_barra_tiempo_escudo
+            if marco_escudo_disponible
+            else self.rect_barra_tiempo
+        )
+        rect_relleno = rect_marco.inflate(-32, -14)
         rect_relleno.width = round(rect_relleno.width * progreso)
-        color_relleno = (241, 251, 164) if marco_escudo_disponible else (98, 149, 232)
+        color_relleno = (
+            (255, 243, 156)
+            if marco_escudo_disponible
+            else (53, 186, 199)
+        )
         pygame.draw.rect(self.pantalla, color_relleno, rect_relleno)
-        self.pantalla.blit(self.marcos_barra_tiempo[nombre_marco], self.rect_barra_tiempo)
+        self.pantalla.blit(self.marcos_barra_tiempo[nombre_marco], rect_marco)
 
     def dibujar_transicion_nivel(self):
         tiempo_transcurrido = (pygame.time.get_ticks() - self.tiempo_transicion_nivel) / 1000
