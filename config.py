@@ -10,3 +10,4 @@ class ConfiguracionJuego:
         self.directorio_base = Path(__file__).parent
         self.archivo_niveles = self.directorio_base / "niveles.txt"
         self.archivo_fuente = self.directorio_base / "assets" / "fonts" / "I-pixel-u.ttf"
+        self.archivo_musica = self.directorio_base / "assets" / "sounds" / "medicine teto.mp3"

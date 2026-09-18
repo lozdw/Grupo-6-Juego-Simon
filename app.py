@@ -19,6 +19,12 @@ class App:
         pygame.font.init()
         self.fuente_titulo = pygame.font.Font(str(config.archivo_fuente), 48)
         self.fuente_normal = pygame.font.Font(str(config.archivo_fuente), 24)
+        self.musica_reproduciendose = False
+        if pygame.mixer.get_init() and config.archivo_musica.exists():
+            pygame.mixer.music.load(str(config.archivo_musica))
+            pygame.mixer.music.set_volume(0.1)
+            pygame.mixer.music.play(-1)
+            self.musica_reproduciendose = True
 
         directorio_imagenes = config.directorio_base / "assets" / "images"
         nombres_colores = {
@@ -111,6 +117,16 @@ class App:
         self.mensaje = f"Nivel {self.gestor_secuencia.consultar_nivel()}"
         self.iniciar_animacion()
 
+    def actualizar_musica(self):
+        if not self.musica_reproduciendose or not pygame.mixer.get_init():
+            return
+
+        musica_de_menu = self.estado_actual in ("MENU", "SELECCION")
+        if musica_de_menu and pygame.mixer.music.get_busy() is False:
+            pygame.mixer.music.unpause()
+        elif not musica_de_menu and pygame.mixer.music.get_busy():
+            pygame.mixer.music.pause()
+
     def iniciar_animacion(self):
         self.estado_actual = "MOSTRANDO_SECUENCIA"
         self.indice_secuencia = 0
@@ -182,6 +198,8 @@ class App:
 
             if self.boton_presionado is not None and pygame.time.get_ticks() >= self.tiempo_boton_presionado:
                 self.boton_presionado = None
+
+            self.actualizar_musica()
             
             self.dibujar()
             pygame.display.flip()
