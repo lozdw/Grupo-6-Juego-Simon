@@ -68,7 +68,12 @@ class App:
             for numero, nombre in nombres_colores.items()
         }
 
-        self.estado_actual = "MENU" # MENU, SELECCION, TRANSICION_NIVEL, MOSTRANDO_SECUENCIA, JUGANDO, GAME_OVER
+        self.logo_intro = pygame.image.load(directorio_imagenes / "logo.jpeg").convert_alpha()
+        self.logo_intro = pygame.transform.smoothscale(self.logo_intro, (420, 420))
+        self.rect_logo_intro = self.logo_intro.get_rect(center=self.pantalla.get_rect().center)
+
+        self.estado_actual = "INTRO" # INTRO, MENU, SELECCION, TRANSICION_NIVEL, MOSTRANDO_SECUENCIA, JUGANDO, GAME_OVER
+        self.tiempo_inicio_intro = pygame.time.get_ticks()
         
         # Colores (1: Rojo, 2: Azul, 3: Verde, 4: Amarillo - Basado en tu Tkinter)
         self.colores_base = {
@@ -137,7 +142,7 @@ class App:
         if not self.musica_reproduciendose or not pygame.mixer.get_init():
             return
 
-        musica_de_menu = self.estado_actual in ("MENU", "SELECCION")
+        musica_de_menu = self.estado_actual in ("INTRO", "MENU", "SELECCION")
         if musica_de_menu and pygame.mixer.music.get_busy() is False:
             pygame.mixer.music.unpause()
         elif not musica_de_menu and pygame.mixer.music.get_busy():
@@ -370,7 +375,22 @@ class App:
 
         self.dibujar_texto_centrado(texto, fuente, (255, 255, 255), rect_panel.center)
 
+    def dibujar_intro(self):
+        self.pantalla.fill((0, 0, 0))
+        tiempo_transcurrido = (pygame.time.get_ticks() - self.tiempo_inicio_intro) / 1000.0
+
+        if tiempo_transcurrido < 2.0:
+            self.pantalla.blit(self.logo_intro, self.rect_logo_intro)
+            return
+
+        self.estado_actual = "MENU"
+        self.tiempo_inicio_intro = pygame.time.get_ticks()
+
     def dibujar(self):
+        if self.estado_actual == "INTRO":
+            self.dibujar_intro()
+            return
+
         self.pantalla.fill((189, 189, 189))
         
         if self.estado_actual == "MENU":
