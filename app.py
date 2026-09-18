@@ -45,7 +45,7 @@ class App:
             for numero, nombre in nombres_colores.items()
         }
 
-        self.estado_actual = "MENU" # MENU, SELECCION, MOSTRANDO_SECUENCIA, JUGANDO, GAME_OVER
+        self.estado_actual = "MENU" # MENU, SELECCION, TRANSICION_NIVEL, MOSTRANDO_SECUENCIA, JUGANDO, GAME_OVER
         
         # Colores (1: Rojo, 2: Azul, 3: Verde, 4: Amarillo - Basado en tu Tkinter)
         self.colores_base = {
@@ -96,6 +96,7 @@ class App:
         self.luz_encendida = False
         self.boton_presionado = None
         self.tiempo_boton_presionado = 0
+        self.tiempo_transicion_nivel = 0
 
     def preparar_juego(self):
         self.gestor_secuencia.iniciar_juego()
@@ -111,6 +112,15 @@ class App:
         self.color_iluminado = None
         self.luz_encendida = False
         self.tiempo_ultimo_cambio = pygame.time.get_ticks()
+
+    def iniciar_transicion_nivel(self):
+        self.estado_actual = "TRANSICION_NIVEL"
+        self.tiempo_transicion_nivel = pygame.time.get_ticks()
+
+    def procesar_transicion_nivel(self):
+        tiempo_transcurrido = (pygame.time.get_ticks() - self.tiempo_transicion_nivel) / 1000
+        if tiempo_transcurrido >= 3.3:
+            self.preparar_juego()
 
     def procesar_animacion(self):
         ahora = pygame.time.get_ticks()
@@ -149,6 +159,9 @@ class App:
 
             if self.estado_actual == "MOSTRANDO_SECUENCIA":
                 self.procesar_animacion()
+
+            if self.estado_actual == "TRANSICION_NIVEL":
+                self.procesar_transicion_nivel()
 
             if self.boton_presionado is not None and pygame.time.get_ticks() >= self.tiempo_boton_presionado:
                 self.boton_presionado = None
@@ -216,8 +229,8 @@ class App:
                             self.gestor_secuencia.consultar_nivel() - 1, 
                             self.personaje_actual.multiplicador_puntaje
                         )
-                        self.mensaje = "¡Siguiente nivel!"
-                        self.preparar_juego()
+                        self.mensaje = "¡¡Siguiente nivel!!"
+                        self.iniciar_transicion_nivel()
                     break
 
             if self.rect_reinicio.collidepoint(pos):
@@ -247,6 +260,25 @@ class App:
         else:
             rect_texto = superficie.get_rect(topright=(self.pantalla.get_rect().right - 30, y))
         self.pantalla.blit(superficie, rect_texto)
+
+    def dibujar_transicion_nivel(self):
+        tiempo_transcurrido = (pygame.time.get_ticks() - self.tiempo_transicion_nivel) / 1000
+        panel = pygame.Surface((460, 190), pygame.SRCALPHA)
+        panel.fill((20, 20, 20, 230))
+        rect_panel = panel.get_rect(center=self.pantalla.get_rect().center)
+        self.pantalla.blit(panel, rect_panel)
+
+        if tiempo_transcurrido < 1:
+            texto = "¡¡Siguiente nivel!!"
+            fuente = self.fuente_normal
+        elif tiempo_transcurrido < 2.5:
+            texto = str(3 - int((tiempo_transcurrido - 1) / 0.5))
+            fuente = self.fuente_titulo
+        else:
+            texto = "¡¡VAMOS!!"
+            fuente = self.fuente_titulo
+
+        self.dibujar_texto_centrado(texto, fuente, (255, 255, 255), rect_panel.center)
 
     def dibujar(self):
         self.pantalla.fill((189, 189, 189))
@@ -304,6 +336,12 @@ class App:
 
             pygame.draw.rect(self.pantalla, (0,0,0), self.rect_reinicio)
             self.dibujar_texto_centrado("RESTART", self.fuente_normal, (255, 255, 255), self.rect_reinicio.center)
+
+        elif self.estado_actual == "TRANSICION_NIVEL":
+            for numero, rect in self.rects_botones.items():
+                tipo_imagen = "presionado" if self.color_iluminado == numero else "normal"
+                self.pantalla.blit(self.imagenes_botones[numero][tipo_imagen], rect)
+            self.dibujar_transicion_nivel()
 
         elif self.estado_actual == "GAME_OVER":
             centro_x = self.pantalla.get_rect().centerx
