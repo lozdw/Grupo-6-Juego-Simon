@@ -288,6 +288,13 @@ class App:
             ancho_boton_personaje,
             alto_boton_personaje,
         )
+        self.rect_personaje_confirmacion = pygame.Rect(
+            centro_x - ancho_boton_personaje // 2,
+            165,
+            ancho_boton_personaje,
+            alto_boton_personaje,
+        )
+        self.rect_continuar = pygame.Rect(centro_x - 200, 500, 400, 70)
         self.personaje_hover = None
         posicion_lateral_x = self.pantalla.get_rect().right - 230
         self.rect_reinicio = pygame.Rect(posicion_lateral_x, centro_y - 55, 200, 50)
@@ -328,7 +335,7 @@ class App:
         if not self.musica_reproduciendose or not pygame.mixer.get_init():
             return
 
-        musica_de_menu = self.estado_actual in ("INTRO", "MENU", "SELECCION")
+        musica_de_menu = self.estado_actual in ("INTRO", "MENU", "SELECCION", "CONFIRMACION_PERSONAJE")
         if musica_de_menu and pygame.mixer.music.get_busy() is False:
             pygame.mixer.music.unpause()
         elif not musica_de_menu and pygame.mixer.music.get_busy():
@@ -511,20 +518,28 @@ class App:
             if self.rect_miku.collidepoint(pos):
                 self.reproducir_sonido_seleccion_personaje()
                 self.personaje_actual = Miku()
-                self.preparar_juego()
+                self.personaje_hover = None
+                self.estado_actual = "CONFIRMACION_PERSONAJE"
             elif self.rect_teto.collidepoint(pos):
                 self.reproducir_sonido_seleccion_personaje()
                 self.personaje_actual = Teto()
-                self.preparar_juego()
+                self.personaje_hover = None
+                self.estado_actual = "CONFIRMACION_PERSONAJE"
             elif self.rect_neru.collidepoint(pos):
                 self.reproducir_sonido_seleccion_personaje()
                 self.personaje_actual = Neru()
-                self.preparar_juego()
+                self.personaje_hover = None
+                self.estado_actual = "CONFIRMACION_PERSONAJE"
             elif self.rect_gumi.collidepoint(pos):
                 self.reproducir_sonido_seleccion_personaje()
                 self.personaje_actual = Gumi()
+                self.personaje_hover = None
+                self.estado_actual = "CONFIRMACION_PERSONAJE"
+
+        elif self.estado_actual == "CONFIRMACION_PERSONAJE":
+            if self.rect_continuar.collidepoint(pos):
                 self.preparar_juego()
-                
+
         elif self.estado_actual == "JUGANDO":
             self.personaje_actual.aplicar_habilidad(self)
             
@@ -889,6 +904,27 @@ class App:
                     (0, 0, 0),
                     (centro_x, limite_inferior_botones + 79),
                 )
+
+        elif self.estado_actual == "CONFIRMACION_PERSONAJE":
+            self.pantalla.blit(self.fondo_seleccion, (0, 0))
+            centro_x = self.pantalla.get_rect().centerx
+            self.dibujar_texto_centrado(
+                "PERSONAJE SELECCIONADO",
+                self.fuente_titulo,
+                (0, 0, 0),
+                (centro_x, 93),
+            )
+            self.personaje_hover = None
+            self.dibujar_personaje(
+                self.rect_personaje_confirmacion,
+                self.personaje_actual.nombre,
+            )
+            self.dibujar_boton(
+                self.rect_continuar,
+                "CONTINUAR",
+                (255, 255, 255),
+                (50, 50, 50),
+            )
 
         elif self.estado_actual in ["MOSTRANDO_SECUENCIA", "JUGANDO"]:
             self.dibujar_texto_lateral(
