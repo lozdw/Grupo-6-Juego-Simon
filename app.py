@@ -188,33 +188,20 @@ class App:
         imagen_marcos_tiempo = pygame.image.load(
             directorio_imagenes / "Barras de tiempo.png"
         ).convert_alpha()
-        tamanos_marcos_tiempo = {
-            "normal": (500, 44),
-            "escudo": (500, 44),
+        recortes_marcos_tiempo = {
+            "Miku": pygame.Rect(0, 0, 430, 50),
+            "Teto": pygame.Rect(435, 0, 430, 50),
+            "Neru": pygame.Rect(0, 70, 430, 50),
+            "Gumi": pygame.Rect(435, 70, 430, 50),
+            "generico": pygame.Rect(180, 150, 435, 40),
         }
-        alto_mitad_marcos = imagen_marcos_tiempo.get_height() // 2
-        marcos_originales = (
-            imagen_marcos_tiempo.subsurface(
-                pygame.Rect(0, 0, imagen_marcos_tiempo.get_width(), alto_mitad_marcos)
-            ),
-            imagen_marcos_tiempo.subsurface(
-                pygame.Rect(
-                    0,
-                    alto_mitad_marcos,
-                    imagen_marcos_tiempo.get_width(),
-                    imagen_marcos_tiempo.get_height() - alto_mitad_marcos,
-                )
-            ),
-        )
+        tamano_marco_tiempo = (500, 44)
         self.marcos_barra_tiempo = {
-            "normal": pygame.transform.smoothscale(
-                marcos_originales[0].subsurface(marcos_originales[0].get_bounding_rect()),
-                tamanos_marcos_tiempo["normal"],
-            ),
-            "escudo": pygame.transform.smoothscale(
-                marcos_originales[1].subsurface(marcos_originales[1].get_bounding_rect()),
-                tamanos_marcos_tiempo["escudo"],
-            ),
+            nombre: pygame.transform.smoothscale(
+                imagen_marcos_tiempo.subsurface(recorte),
+                tamano_marco_tiempo,
+            )
+            for nombre, recorte in recortes_marcos_tiempo.items()
         }
 
         self.estado_actual = "INTRO" # INTRO, MENU, SELECCION, TRANSICION_NIVEL, MOSTRANDO_SECUENCIA, JUGANDO, GAME_OVER
@@ -244,14 +231,9 @@ class App:
             1: pygame.Rect(inicio_juego_x + 300, inicio_juego_y + 300, 300, 300), # Rojo (Abajo derecha)
         }
         self.rect_barra_tiempo = pygame.Rect(
-            self.pantalla.get_rect().centerx - tamanos_marcos_tiempo["normal"][0] // 2,
+            self.pantalla.get_rect().centerx - tamano_marco_tiempo[0] // 2,
             self.rects_botones[4].bottom + 10,
-            *tamanos_marcos_tiempo["normal"],
-        )
-        self.rect_barra_tiempo_escudo = pygame.Rect(
-            self.rect_barra_tiempo.left,
-            self.rect_barra_tiempo.top,
-            *tamanos_marcos_tiempo["escudo"],
+            *tamano_marco_tiempo,
         )
         self.estrellita = self.crear_estrellita(84)
         
@@ -318,6 +300,13 @@ class App:
         self.t_restante = 10.0
         self.mensaje = f"Nivel {self.gestor_secuencia.consultar_nivel()}"
         self.iniciar_animacion()
+
+    def saltar_nivel(self):
+        if self.personaje_actual is None:
+            return
+
+        self.gestor_secuencia.avanzar_nivel()
+        self.preparar_juego()
 
     def actualizar_musica(self):
         if not self.musica_reproduciendose or not pygame.mixer.get_init():
@@ -389,6 +378,18 @@ class App:
                 
                 if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                     self.manejar_clic(evento.pos)
+
+                if (
+                    evento.type == pygame.KEYDOWN
+                    and evento.key == pygame.K_j
+                    and self.estado_actual in (
+                        "MOSTRANDO_SECUENCIA",
+                        "JUGANDO",
+                        "TRANSICION_NIVEL",
+                        "ESPERANDO_TRANSICION",
+                    )
+                ):
+                    self.saltar_nivel()
 
                 if evento.type == pygame.MOUSEMOTION and self.estado_actual == "SELECCION":
                     self.actualizar_personaje_hover(evento.pos)
@@ -742,25 +743,27 @@ class App:
         tiempo_total = max(0.0, float(self.t_total))
         tiempo_restante = max(0.0, float(self.t_restante))
         progreso = min(1.0, tiempo_restante / tiempo_total) if tiempo_total else 0.0
-        marco_escudo_disponible = (
+        habilidad_activa = (
             self.personaje_actual is not None
-            and self.personaje_actual.nombre == "Neru"
-            and (
-                not self.personaje_actual.habilidad_aplicada
-                or self.personaje_actual.escudo_activo
-            )
+            and self.personaje_actual.habilidad_aplicada
         )
-        nombre_marco = "escudo" if marco_escudo_disponible else "normal"
-        rect_marco = (
-            self.rect_barra_tiempo_escudo
-            if marco_escudo_disponible
-            else self.rect_barra_tiempo
+        nombre_marco = (
+            self.personaje_actual.nombre
+            if habilidad_activa
+            else "generico"
         )
+        rect_marco = self.rect_barra_tiempo
         rect_relleno = rect_marco.inflate(-32, -14)
         rect_relleno.width = round(rect_relleno.width * progreso)
+        colores_barras_personajes = {
+            "Miku": (53, 186, 199),
+            "Teto": (228, 18, 53),
+            "Neru": (255, 243, 156),
+            "Gumi": (128, 234, 121),
+        }
         color_relleno = (
-            (255, 243, 156)
-            if marco_escudo_disponible
+            colores_barras_personajes[self.personaje_actual.nombre]
+            if habilidad_activa
             else (53, 186, 199)
         )
         pygame.draw.rect(self.pantalla, color_relleno, rect_relleno)
