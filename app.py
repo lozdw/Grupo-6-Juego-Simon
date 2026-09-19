@@ -555,13 +555,19 @@ class App:
                     elif resultado == "EXITO":
                         if self.sonido_nivel is not None and not self.sonidos_sistema_silenciados:
                             self.sonido_nivel.play()
-                        self.gestor_puntuacion.agregar_por_ronda(
+                        self.gestor_puntuacion.agregar_por_acierto(
                             self.t_restante, 
                             self.gestor_secuencia.consultar_nivel() - 1, 
                             self.personaje_actual.multiplicador_puntaje
                         )
                         self.mensaje = "¡¡Siguiente nivel!!"
                         self.iniciar_espera_transicion()
+                    elif resultado == "CONTINUAR":
+                        self.gestor_puntuacion.agregar_por_acierto(
+                            self.t_restante,
+                            self.gestor_secuencia.consultar_nivel(),
+                            self.personaje_actual.multiplicador_puntaje,
+                        )
                     break
 
             if self.rect_reinicio.collidepoint(pos):

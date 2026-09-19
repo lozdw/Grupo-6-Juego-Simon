@@ -10,3 +10,6 @@ class GestorPuntuacion:
         puntos = int(puntos_base * float(multiplicador))
         self.total += puntos
         return puntos 
+
+    def agregar_por_acierto(self, tiempo_restante, nivel, multiplicador=1.0):
+        return self.agregar_por_ronda(tiempo_restante, nivel, multiplicador)
