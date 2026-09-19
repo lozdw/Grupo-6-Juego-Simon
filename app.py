@@ -1,5 +1,9 @@
 import math
 import pygame
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 from score import GestorPuntuacion
 from funtions import GestorSecuencia
 from personajes import Miku, Teto, Neru, Gumi
@@ -43,6 +47,14 @@ class App:
             self.sonido_boton_amarillo.set_volume(0.3)
 
         directorio_imagenes = config.directorio_base / "assets" / "images"
+        directorio_fondos = config.directorio_base / "assets" / "backgrounds"
+        self.fondo_menu = pygame.transform.smoothscale(
+            pygame.image.load(directorio_fondos / "fondo cortado.png").convert(),
+            self.pantalla.get_size(),
+        )
+        self.video_fondo = None
+        if cv2 is not None:
+            self.video_fondo = cv2.VideoCapture(str(directorio_fondos / "fondo juego.mp4"))
         nombres_colores = {
             1: "rojo",
             2: "azul",
@@ -304,6 +316,26 @@ class App:
             self.dibujar()
             pygame.display.flip()
 
+        if self.video_fondo is not None:
+            self.video_fondo.release()
+
+    def actualizar_fondo_menu(self):
+        if self.video_fondo is None:
+            return
+
+        lectura_correcta, fotograma = self.video_fondo.read()
+        if not lectura_correcta:
+            self.video_fondo.set(cv2.CAP_PROP_POS_FRAMES, 0)
+            lectura_correcta, fotograma = self.video_fondo.read()
+        if not lectura_correcta:
+            return
+
+        fotograma = cv2.cvtColor(fotograma, cv2.COLOR_BGR2RGB)
+        fotograma = cv2.resize(fotograma, self.pantalla.get_size())
+        self.fondo_menu = pygame.image.frombuffer(
+            fotograma.tobytes(), self.pantalla.get_size(), "RGB"
+        ).convert()
+
     def error_debe_penalizar(self):
         if not hasattr(self, "personaje_actual") or self.personaje_actual is None:
             return True
@@ -514,6 +546,8 @@ class App:
         self.pantalla.fill((189, 189, 189))
         
         if self.estado_actual == "MENU":
+            self.actualizar_fondo_menu()
+            self.pantalla.blit(self.fondo_menu, (0, 0))
             centro_x = self.pantalla.get_rect().centerx
             centro_y = self.pantalla.get_rect().centery
             self.dibujar_texto_centrado("VoColoroid", self.fuente_titulo, (0, 0, 0), (centro_x, centro_y - 100))
