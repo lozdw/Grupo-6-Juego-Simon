@@ -185,6 +185,22 @@ class App:
             )
             for nombre, archivo in nombres_imagenes_personajes_hover.items()
         }
+        self.fondo_recuadro_neru = pygame.transform.smoothscale(
+            pygame.image.load(directorio_imagenes / "cuADRO AMARILLO.png").convert_alpha(),
+            (210, 210),
+        )
+        self.fondo_recuadro_teto = pygame.transform.smoothscale(
+            pygame.image.load(directorio_imagenes / "cua rojo.png").convert_alpha(),
+            (210, 210),
+        )
+        self.fondo_recuadro_gumi = pygame.transform.smoothscale(
+            pygame.image.load(directorio_imagenes / "cua verde.png").convert_alpha(),
+            (210, 210),
+        )
+        self.fondo_recuadro_miku = pygame.transform.smoothscale(
+            pygame.image.load(directorio_imagenes / "cua azul.png").convert_alpha(),
+            (210, 210),
+        )
         imagen_marcos_tiempo = pygame.image.load(
             directorio_imagenes / "Barras de tiempo.png"
         ).convert_alpha()
@@ -600,11 +616,21 @@ class App:
         self.dibujar_texto_centrado(texto, self.fuente_normal, color_texto, rect.center)
 
     def dibujar_personaje(self, rect, nombre):
-        sombra = pygame.Surface(rect.size, pygame.SRCALPHA)
-        pygame.draw.rect(sombra, (0, 0, 0, 75), sombra.get_rect())
-        self.pantalla.blit(sombra, rect.move(6, 6))
-        pygame.draw.rect(self.pantalla, (255, 255, 255), rect)
-        pygame.draw.rect(self.pantalla, (0, 0, 0), rect, 2)
+        if nombre not in ("Neru", "Teto", "Gumi", "Miku"):
+            sombra = pygame.Surface(rect.size, pygame.SRCALPHA)
+            pygame.draw.rect(sombra, (0, 0, 0, 75), sombra.get_rect())
+            self.pantalla.blit(sombra, rect.move(6, 6))
+        if nombre == "Neru":
+            self.pantalla.blit(self.fondo_recuadro_neru, rect)
+        elif nombre == "Teto":
+            self.pantalla.blit(self.fondo_recuadro_teto, rect)
+        elif nombre == "Gumi":
+            self.pantalla.blit(self.fondo_recuadro_gumi, rect)
+        elif nombre == "Miku":
+            self.pantalla.blit(self.fondo_recuadro_miku, rect)
+        else:
+            pygame.draw.rect(self.pantalla, (255, 255, 255), rect)
+            pygame.draw.rect(self.pantalla, (0, 0, 0), rect, 2)
         imagenes = self.imagenes_personajes_hover if nombre == self.personaje_hover else self.imagenes_personajes
         imagen = imagenes[nombre]
         self.pantalla.blit(imagen, imagen.get_rect(center=(rect.centerx, rect.top + 95)))
