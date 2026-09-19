@@ -49,6 +49,32 @@ class App:
         if pygame.mixer.get_init() and config.archivo_sonido_amarillo.exists():
             self.sonido_boton_amarillo = pygame.mixer.Sound(str(config.archivo_sonido_amarillo))
             self.sonido_boton_amarillo.set_volume(0.3)
+        self.sonido_seleccion_personaje = None
+        if pygame.mixer.get_init() and config.archivo_sonido_seleccion_personaje.exists():
+            self.sonido_seleccion_personaje = pygame.mixer.Sound(
+                str(config.archivo_sonido_seleccion_personaje)
+            )
+            self.sonido_seleccion_personaje.set_volume(1.0)
+        self.sonido_iniciar = None
+        if pygame.mixer.get_init() and config.archivo_sonido_iniciar.exists():
+            self.sonido_iniciar = pygame.mixer.Sound(str(config.archivo_sonido_iniciar))
+            self.sonido_iniciar.set_volume(1.0)
+        self.sonido_nivel = None
+        if pygame.mixer.get_init() and config.archivo_sonido_nivel.exists():
+            self.sonido_nivel = pygame.mixer.Sound(str(config.archivo_sonido_nivel))
+            self.sonido_nivel.set_volume(0.3)
+        self.sonido_reinicio = None
+        if pygame.mixer.get_init() and config.archivo_sonido_reinicio.exists():
+            self.sonido_reinicio = pygame.mixer.Sound(str(config.archivo_sonido_reinicio))
+            self.sonido_reinicio.set_volume(0.3)
+        self.sonido_corazon = None
+        if pygame.mixer.get_init() and config.archivo_sonido_corazon.exists():
+            self.sonido_corazon = pygame.mixer.Sound(str(config.archivo_sonido_corazon))
+            self.sonido_corazon.set_volume(0.3)
+        self.sonido_settings = None
+        if pygame.mixer.get_init() and config.archivo_sonido_settings.exists():
+            self.sonido_settings = pygame.mixer.Sound(str(config.archivo_sonido_settings))
+            self.sonido_settings.set_volume(0.3)
 
         directorio_imagenes = config.directorio_base / "assets" / "images"
         directorio_fondos = config.directorio_base / "assets" / "backgrounds"
@@ -210,7 +236,7 @@ class App:
         
         centro_juego = self.pantalla.get_rect().center
         inicio_juego_x = centro_juego[0] - 300
-        inicio_juego_y = centro_juego[1] - 300
+        inicio_juego_y = centro_juego[1] - 300 - 29
         self.rects_botones = {
             3: pygame.Rect(inicio_juego_x, inicio_juego_y, 300, 300), # Verde (Arriba izquierda)
             2: pygame.Rect(inicio_juego_x + 300, inicio_juego_y, 300, 300), # Azul (Arriba derecha)
@@ -427,9 +453,18 @@ class App:
 
         return True
 
+    def reproducir_sonido_seleccion_personaje(self):
+        if (
+            self.sonido_seleccion_personaje is not None
+            and not self.sonidos_sistema_silenciados
+        ):
+            self.sonido_seleccion_personaje.play()
+
     def manejar_clic(self, pos):
         if self.estado_actual == "MENU":
             if self.rect_boton_settings.collidepoint(pos):
+                if self.sonido_settings is not None and not self.sonidos_sistema_silenciados:
+                    self.sonido_settings.play()
                 self.ventana_settings_abierta = not self.ventana_settings_abierta
                 self.ventana_creditos_abierta = False
             elif self.ventana_settings_abierta and self.rect_ajuste_musica.collidepoint(pos):
@@ -442,6 +477,8 @@ class App:
                 self.sonidos_sistema_silenciados = not self.sonidos_sistema_silenciados
             elif self.rect_boton_creditos.collidepoint(pos):
                 self.tiempo_boton_creditos_presionado = pygame.time.get_ticks() + 150
+                if self.sonido_corazon is not None and not self.sonidos_sistema_silenciados:
+                    self.sonido_corazon.play()
                 self.ventana_creditos_abierta = not self.ventana_creditos_abierta
                 self.ventana_settings_abierta = False
             elif self.ventana_settings_abierta:
@@ -449,19 +486,25 @@ class App:
             elif self.ventana_creditos_abierta:
                 self.ventana_creditos_abierta = False
             elif self.rect_iniciar.collidepoint(pos):
+                if self.sonido_iniciar is not None and not self.sonidos_sistema_silenciados:
+                    self.sonido_iniciar.play()
                 self.estado_actual = "SELECCION"
             
         elif self.estado_actual == "SELECCION":
             if self.rect_miku.collidepoint(pos):
+                self.reproducir_sonido_seleccion_personaje()
                 self.personaje_actual = Miku()
                 self.preparar_juego()
             elif self.rect_teto.collidepoint(pos):
+                self.reproducir_sonido_seleccion_personaje()
                 self.personaje_actual = Teto()
                 self.preparar_juego()
             elif self.rect_neru.collidepoint(pos):
+                self.reproducir_sonido_seleccion_personaje()
                 self.personaje_actual = Neru()
                 self.preparar_juego()
             elif self.rect_gumi.collidepoint(pos):
+                self.reproducir_sonido_seleccion_personaje()
                 self.personaje_actual = Gumi()
                 self.preparar_juego()
                 
@@ -493,6 +536,8 @@ class App:
                             self.mensaje = "¡Escudo de Neru!"
                             self.iniciar_animacion()
                     elif resultado == "EXITO":
+                        if self.sonido_nivel is not None and not self.sonidos_sistema_silenciados:
+                            self.sonido_nivel.play()
                         self.gestor_puntuacion.agregar_por_ronda(
                             self.t_restante, 
                             self.gestor_secuencia.consultar_nivel() - 1, 
@@ -503,19 +548,27 @@ class App:
                     break
 
             if self.rect_reinicio.collidepoint(pos):
+                if self.sonido_settings is not None and not self.sonidos_sistema_silenciados:
+                    self.sonido_settings.play()
                 self.gestor_secuencia.reiniciar_progreso()
                 self.estado_actual = "SELECCION"
             elif self.rect_volver.collidepoint(pos):
+                if self.sonido_settings is not None and not self.sonidos_sistema_silenciados:
+                    self.sonido_settings.play()
                 self.gestor_secuencia.reiniciar_progreso()
                 self.gestor_puntuacion.reset()
                 self.estado_actual = "MENU"
 
         elif self.estado_actual == "GAME_OVER":
             if self.rect_reinicio.collidepoint(pos):
+                if self.sonido_settings is not None and not self.sonidos_sistema_silenciados:
+                    self.sonido_settings.play()
                 self.gestor_secuencia.reiniciar_progreso()
                 self.gestor_puntuacion.reset()
                 self.estado_actual = "SELECCION"
             elif self.rect_volver.collidepoint(pos):
+                if self.sonido_settings is not None and not self.sonidos_sistema_silenciados:
+                    self.sonido_settings.play()
                 self.gestor_secuencia.reiniciar_progreso()
                 self.gestor_puntuacion.reset()
                 self.estado_actual = "MENU"
@@ -664,7 +717,11 @@ class App:
         return superficie
 
     def dibujar_estrellita(self):
-        rect_estrella = self.estrellita.get_rect(center=self.pantalla.get_rect().center)
+        centro_estrellita = (
+            self.pantalla.get_rect().centerx,
+            self.pantalla.get_rect().centery - 29,
+        )
+        rect_estrella = self.estrellita.get_rect(center=centro_estrellita)
         self.pantalla.blit(self.estrellita, rect_estrella)
 
     def dibujar_personaje_jugando(self):
@@ -732,8 +789,17 @@ class App:
         self.pantalla.fill((0, 0, 0))
         tiempo_transcurrido = (pygame.time.get_ticks() - self.tiempo_inicio_intro) / 1000.0
 
-        if tiempo_transcurrido < 2.0:
+        if tiempo_transcurrido < 1.0:
             self.pantalla.blit(self.logo_intro, self.rect_logo_intro)
+            return
+
+        duracion_fade = 0.25
+        if tiempo_transcurrido < 1.0 + duracion_fade:
+            self.pantalla.blit(self.logo_intro, self.rect_logo_intro)
+            progreso_fade = (tiempo_transcurrido - 1.0) / duracion_fade
+            capa_negra = pygame.Surface(self.pantalla.get_size(), pygame.SRCALPHA)
+            capa_negra.fill((0, 0, 0, round(255 * progreso_fade)))
+            self.pantalla.blit(capa_negra, (0, 0))
             return
 
         self.estado_actual = "MENU"
@@ -778,7 +844,7 @@ class App:
                 self.dibujar_personaje(rect, nombre)
                 if nombre == self.personaje_hover:
                     self.dibujar_mensaje_ingresar(rect, nombre)
-            if self.gestor_puntuacion.total > 0:
+            if self.gestor_puntuacion.total > 0 and self.personaje_hover is None:
                 limite_inferior_botones = max(
                     rect.bottom for rect in (self.rect_miku, self.rect_teto, self.rect_neru, self.rect_gumi)
                 )
@@ -786,7 +852,7 @@ class App:
                     f"Último Puntaje: {self.gestor_puntuacion.total}",
                     self.fuente_normal,
                     (0, 0, 0),
-                    (centro_x, limite_inferior_botones + 60),
+                    (centro_x, limite_inferior_botones + 79),
                 )
 
         elif self.estado_actual in ["MOSTRANDO_SECUENCIA", "JUGANDO"]:
