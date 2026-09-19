@@ -60,6 +60,23 @@ class App:
             pygame.image.load(directorio_fondos / "5 sin título.png").convert(),
             self.pantalla.get_size(),
         )
+        logo_inicio_original = pygame.image.load(
+            directorio_fondos / "Logo VoColoroid con N.png"
+        ).convert_alpha()
+        ancho_logo_inicio = 400
+        alto_logo_inicio = round(
+            logo_inicio_original.get_height()
+            * ancho_logo_inicio
+            / logo_inicio_original.get_width()
+        )
+        self.logo_inicio = pygame.transform.smoothscale(
+            logo_inicio_original,
+            (ancho_logo_inicio, alto_logo_inicio),
+        )
+        desplazamiento_inicio = 86
+        self.rect_logo_inicio = self.logo_inicio.get_rect(
+            center=(self.pantalla.get_rect().centerx, 205 + desplazamiento_inicio)
+        )
         self.video_fondo = None
         if cv2 is not None:
             self.video_fondo = cv2.VideoCapture(str(directorio_fondos / "e.mp4"))
@@ -190,7 +207,13 @@ class App:
         
         centro_x = self.pantalla.get_rect().centerx
         centro_y = self.pantalla.get_rect().centery
-        self.rect_iniciar = pygame.Rect(centro_x - 200, centro_y - 35, 400, 70)
+        desplazamiento_inicio = 86
+        self.rect_iniciar = pygame.Rect(
+            centro_x - 200,
+            centro_y - 35 + desplazamiento_inicio,
+            400,
+            70,
+        )
         ancho_boton_personaje = 210
         alto_boton_personaje = 210
         espacio_boton_personaje = 15
@@ -480,6 +503,9 @@ class App:
         self.dibujar_texto_centrado(texto, self.fuente_normal, color_texto, rect.center)
 
     def dibujar_personaje(self, rect, nombre):
+        sombra = pygame.Surface(rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(sombra, (0, 0, 0, 75), sombra.get_rect())
+        self.pantalla.blit(sombra, rect.move(6, 6))
         pygame.draw.rect(self.pantalla, (255, 255, 255), rect)
         pygame.draw.rect(self.pantalla, (0, 0, 0), rect, 2)
         imagenes = self.imagenes_personajes_hover if nombre == self.personaje_hover else self.imagenes_personajes
@@ -513,6 +539,9 @@ class App:
         alto_mensaje = len(lineas) * 20 + 12
         rect_mensaje = pygame.Rect(0, rect.bottom + 12, ancho_mensaje, alto_mensaje)
         rect_mensaje.centerx = rect.centerx
+        sombra = pygame.Surface(rect_mensaje.size, pygame.SRCALPHA)
+        pygame.draw.rect(sombra, (0, 0, 0, 75), sombra.get_rect())
+        self.pantalla.blit(sombra, rect_mensaje.move(6, 6))
         pygame.draw.rect(self.pantalla, (255, 255, 255), rect_mensaje)
         pygame.draw.rect(self.pantalla, (0, 0, 0), rect_mensaje, 2)
         for indice, linea in enumerate(lineas):
@@ -631,7 +660,7 @@ class App:
             self.pantalla.blit(self.marco_menu, (0, 0))
             centro_x = self.pantalla.get_rect().centerx
             centro_y = self.pantalla.get_rect().centery
-            self.dibujar_texto_centrado("VoColoroid", self.fuente_titulo, (0, 0, 0), (centro_x, centro_y - 100))
+            self.pantalla.blit(self.logo_inicio, self.rect_logo_inicio)
             self.dibujar_boton(self.rect_iniciar, "Haz clic para iniciar", (255, 255, 255), (50, 50, 50))
             
         elif self.estado_actual == "SELECCION":
