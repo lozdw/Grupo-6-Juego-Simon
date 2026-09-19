@@ -56,7 +56,7 @@ class App:
         self.fondo_menu = self.marco_menu.copy()
         self.video_fondo = None
         if cv2 is not None:
-            self.video_fondo = cv2.VideoCapture(str(directorio_fondos / "fondo juego.mp4"))
+            self.video_fondo = cv2.VideoCapture(str(directorio_fondos / "e.mp4"))
         nombres_colores = {
             1: "rojo",
             2: "azul",
@@ -98,6 +98,19 @@ class App:
                 (tamano_imagen_personaje, tamano_imagen_personaje),
             )
             for nombre, archivo in nombres_imagenes_personajes.items()
+        }
+        nombres_imagenes_personajes_hover = {
+            "Miku": "Miku Guiño.png",
+            "Teto": "Teto Guiño.png",
+            "Neru": "Neru Guiño.png",
+            "Gumi": "Gumi Guiño.png",
+        }
+        self.imagenes_personajes_hover = {
+            nombre: pygame.transform.smoothscale(
+                pygame.image.load(directorio_imagenes / archivo).convert_alpha(),
+                (tamano_imagen_personaje, tamano_imagen_personaje),
+            )
+            for nombre, archivo in nombres_imagenes_personajes_hover.items()
         }
         imagen_marcos_tiempo = pygame.image.load(
             directorio_imagenes / "Barras de tiempo.png"
@@ -174,9 +187,11 @@ class App:
         self.rect_iniciar = pygame.Rect(centro_x - 200, centro_y - 35, 400, 70)
         ancho_boton_personaje = 230
         alto_boton_personaje = 230
-        espacio_boton_personaje = 30
-        inicio_x = centro_x - ((ancho_boton_personaje * 2 + espacio_boton_personaje) // 2)
-        inicio_y = centro_y - 230
+        espacio_boton_personaje = 20
+        inicio_x = centro_x - (
+            (ancho_boton_personaje * 4 + espacio_boton_personaje * 3) // 2
+        )
+        inicio_y = centro_y - 190
         self.rect_miku = pygame.Rect(inicio_x, inicio_y, ancho_boton_personaje, alto_boton_personaje)
         self.rect_teto = pygame.Rect(
             inicio_x + ancho_boton_personaje + espacio_boton_personaje,
@@ -185,17 +200,18 @@ class App:
             alto_boton_personaje,
         )
         self.rect_neru = pygame.Rect(
-            inicio_x,
-            inicio_y + alto_boton_personaje + espacio_boton_personaje,
+            inicio_x + (ancho_boton_personaje + espacio_boton_personaje) * 2,
+            inicio_y,
             ancho_boton_personaje,
             alto_boton_personaje,
         )
         self.rect_gumi = pygame.Rect(
-            inicio_x + ancho_boton_personaje + espacio_boton_personaje,
-            inicio_y + alto_boton_personaje + espacio_boton_personaje,
+            inicio_x + (ancho_boton_personaje + espacio_boton_personaje) * 3,
+            inicio_y,
             ancho_boton_personaje,
             alto_boton_personaje,
         )
+        self.personaje_hover = None
         posicion_lateral_x = self.pantalla.get_rect().right - 230
         self.rect_reinicio = pygame.Rect(posicion_lateral_x, centro_y - 55, 200, 50)
         self.rect_volver = pygame.Rect(posicion_lateral_x, centro_y + 5, 200, 50)
@@ -293,6 +309,9 @@ class App:
                 
                 if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                     self.manejar_clic(evento.pos)
+
+                if evento.type == pygame.MOUSEMOTION and self.estado_actual == "SELECCION":
+                    self.actualizar_personaje_hover(evento.pos)
 
             # Restar tiempo solo si el jugador tiene el control
             if self.estado_actual == "JUGANDO":
@@ -428,6 +447,21 @@ class App:
                 self.gestor_puntuacion.reset()
                 self.estado_actual = "MENU"
 
+    def actualizar_personaje_hover(self, pos):
+        self.personaje_hover = next(
+            (
+                nombre
+                for rect, nombre in (
+                    (self.rect_miku, "Miku"),
+                    (self.rect_teto, "Teto"),
+                    (self.rect_neru, "Neru"),
+                    (self.rect_gumi, "Gumi"),
+                )
+                if rect.collidepoint(pos)
+            ),
+            None,
+        )
+
     def dibujar_texto_centrado(self, texto, fuente, color, centro):
         superficie = fuente.render(texto, True, color)
         rect_texto = superficie.get_rect(center=centro)
@@ -441,9 +475,22 @@ class App:
     def dibujar_personaje(self, rect, nombre):
         pygame.draw.rect(self.pantalla, (255, 255, 255), rect)
         pygame.draw.rect(self.pantalla, (0, 0, 0), rect, 2)
-        imagen = self.imagenes_personajes[nombre]
+        imagenes = self.imagenes_personajes_hover if nombre == self.personaje_hover else self.imagenes_personajes
+        imagen = imagenes[nombre]
         self.pantalla.blit(imagen, imagen.get_rect(center=(rect.centerx, rect.top + 95)))
         self.dibujar_texto_centrado(nombre, self.fuente_normal, (0, 0, 0), (rect.centerx, rect.bottom - 28))
+
+    def dibujar_mensaje_ingresar(self, rect):
+        rect_mensaje = pygame.Rect(0, rect.bottom + 12, 210, 42)
+        rect_mensaje.centerx = rect.centerx
+        pygame.draw.rect(self.pantalla, (255, 255, 255), rect_mensaje)
+        pygame.draw.rect(self.pantalla, (0, 0, 0), rect_mensaje, 2)
+        self.dibujar_texto_centrado(
+            "INGRESAR AQUÍ",
+            self.fuente_normal,
+            (0, 0, 0),
+            rect_mensaje.center,
+        )
 
     def dibujar_texto_lateral(self, texto, fuente, color, y, lado):
         superficie = fuente.render(texto, True, color)
@@ -559,14 +606,18 @@ class App:
         elif self.estado_actual == "SELECCION":
             centro_x = self.pantalla.get_rect().centerx
             centro_y = self.pantalla.get_rect().centery
+            self.actualizar_personaje_hover(pygame.mouse.get_pos())
             self.dibujar_texto_centrado("ELEGIR PERSONAJE", self.fuente_titulo, (0, 0, 0), (centro_x, 55))
-            for rect, nombre in (
+            personajes = (
                 (self.rect_miku, "Miku"),
                 (self.rect_teto, "Teto"),
                 (self.rect_neru, "Neru"),
                 (self.rect_gumi, "Gumi"),
-            ):
+            )
+            for rect, nombre in personajes:
                 self.dibujar_personaje(rect, nombre)
+                if nombre == self.personaje_hover:
+                    self.dibujar_mensaje_ingresar(rect)
             if self.gestor_puntuacion.total > 0:
                 limite_inferior_botones = max(
                     rect.bottom for rect in (self.rect_miku, self.rect_teto, self.rect_neru, self.rect_gumi)
