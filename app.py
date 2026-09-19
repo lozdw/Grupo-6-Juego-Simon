@@ -26,9 +26,11 @@ class App:
         self.fuente_normal = pygame.font.Font(str(config.archivo_fuente), 24)
         self.fuente_mensaje = pygame.font.Font(str(config.archivo_fuente), 16)
         self.musica_reproduciendose = False
+        self.musica_silenciada = False
+        self.volumen_musica = 0.1
         if pygame.mixer.get_init() and config.archivo_musica.exists():
             pygame.mixer.music.load(str(config.archivo_musica))
-            pygame.mixer.music.set_volume(0.1)
+            pygame.mixer.music.set_volume(self.volumen_musica)
             pygame.mixer.music.play(-1)
             self.musica_reproduciendose = True
         self.sonido_boton_rojo = None
@@ -77,6 +79,28 @@ class App:
         self.rect_logo_inicio = self.logo_inicio.get_rect(
             center=(self.pantalla.get_rect().centerx, 205 + desplazamiento_inicio)
         )
+        imagen_boton_creditos = pygame.image.load(
+            directorio_imagenes / "boton creditos.png"
+        ).convert_alpha()
+        self.boton_creditos = pygame.transform.smoothscale(imagen_boton_creditos, (72, 72))
+        self.rect_boton_creditos = self.boton_creditos.get_rect(
+            bottomright=(self.pantalla.get_rect().right - 149, self.pantalla.get_rect().bottom - 63)
+        )
+        imagen_boton_settings = pygame.image.load(
+            directorio_imagenes / "boton setting.png"
+        ).convert_alpha()
+        self.boton_settings = imagen_boton_settings
+        self.rect_boton_settings = self.boton_settings.get_rect(
+            left=self.rect_boton_creditos.right - 20,
+            centery=self.rect_boton_creditos.centery,
+        )
+        self.tiempo_boton_creditos_presionado = 0
+        self.ventana_creditos_abierta = False
+        self.ventana_settings_abierta = False
+        self.sonidos_sistema_silenciados = False
+        self.rect_ajuste_musica = pygame.Rect(0, 0, 360, 42)
+        self.rect_ajuste_musica.center = (self.pantalla.get_rect().centerx, 365)
+        self.rect_ajuste_sistema = self.rect_ajuste_musica.move(0, 58)
         self.video_fondo = None
         if cv2 is not None:
             self.video_fondo = cv2.VideoCapture(str(directorio_fondos / "e.mp4"))
@@ -405,7 +429,26 @@ class App:
 
     def manejar_clic(self, pos):
         if self.estado_actual == "MENU":
-            if self.rect_iniciar.collidepoint(pos):
+            if self.rect_boton_settings.collidepoint(pos):
+                self.ventana_settings_abierta = not self.ventana_settings_abierta
+                self.ventana_creditos_abierta = False
+            elif self.ventana_settings_abierta and self.rect_ajuste_musica.collidepoint(pos):
+                self.musica_silenciada = not self.musica_silenciada
+                if pygame.mixer.get_init():
+                    pygame.mixer.music.set_volume(
+                        0.0 if self.musica_silenciada else self.volumen_musica
+                    )
+            elif self.ventana_settings_abierta and self.rect_ajuste_sistema.collidepoint(pos):
+                self.sonidos_sistema_silenciados = not self.sonidos_sistema_silenciados
+            elif self.rect_boton_creditos.collidepoint(pos):
+                self.tiempo_boton_creditos_presionado = pygame.time.get_ticks() + 150
+                self.ventana_creditos_abierta = not self.ventana_creditos_abierta
+                self.ventana_settings_abierta = False
+            elif self.ventana_settings_abierta:
+                self.ventana_settings_abierta = False
+            elif self.ventana_creditos_abierta:
+                self.ventana_creditos_abierta = False
+            elif self.rect_iniciar.collidepoint(pos):
                 self.estado_actual = "SELECCION"
             
         elif self.estado_actual == "SELECCION":
@@ -552,6 +595,55 @@ class App:
                 (rect_mensaje.centerx, rect_mensaje.top + 10 + indice * 20),
             )
 
+    def dibujar_ventana_creditos(self):
+        rect_ventana = pygame.Rect(0, 0, 430, 300)
+        rect_ventana.center = self.pantalla.get_rect().center
+        ventana = pygame.Surface(rect_ventana.size, pygame.SRCALPHA)
+        ventana.fill((0, 0, 0, 190))
+        self.pantalla.blit(ventana, rect_ventana)
+        lineas = (
+            "Elaborado por:",
+            "",
+            "Luis Cardona",
+            "",
+            "Natalia Chacón",
+            "",
+            "Génesis Cova",
+            "",
+            "Javier García",
+        )
+        alto_linea = 28
+        inicio_y = rect_ventana.centery - (len(lineas) - 1) * alto_linea // 2
+        for indice, linea in enumerate(lineas):
+            if linea:
+                self.dibujar_texto_centrado(
+                    linea,
+                    self.fuente_normal,
+                    (255, 255, 255),
+                    (rect_ventana.centerx, inicio_y + indice * alto_linea),
+                )
+
+    def dibujar_ventana_settings(self):
+        rect_ventana = pygame.Rect(0, 0, 430, 220)
+        rect_ventana.center = self.pantalla.get_rect().center
+        ventana = pygame.Surface(rect_ventana.size, pygame.SRCALPHA)
+        ventana.fill((0, 0, 0, 190))
+        self.pantalla.blit(ventana, rect_ventana)
+        self.dibujar_texto_centrado(
+            "AJUSTES",
+            self.fuente_titulo,
+            (255, 255, 255),
+            (rect_ventana.centerx, rect_ventana.top + 65),
+        )
+        texto_musica = "MÚSICA: SILENCIADA" if self.musica_silenciada else "MÚSICA: ACTIVADA"
+        texto_sistema = (
+            "SONIDOS SISTEMA: SILENCIADOS"
+            if self.sonidos_sistema_silenciados
+            else "SONIDOS SISTEMA: ACTIVADOS"
+        )
+        self.dibujar_boton(self.rect_ajuste_musica, texto_musica, (255, 255, 255), (0, 0, 0))
+        self.dibujar_boton(self.rect_ajuste_sistema, texto_sistema, (255, 255, 255), (0, 0, 0))
+
     def dibujar_texto_lateral(self, texto, fuente, color, y, lado):
         superficie = fuente.render(texto, True, color)
         if lado == "izquierda":
@@ -662,6 +754,13 @@ class App:
             centro_y = self.pantalla.get_rect().centery
             self.pantalla.blit(self.logo_inicio, self.rect_logo_inicio)
             self.dibujar_boton(self.rect_iniciar, "Haz clic para iniciar", (255, 255, 255), (50, 50, 50))
+            rect_creditos = self.rect_boton_creditos
+            self.pantalla.blit(self.boton_creditos, rect_creditos)
+            self.pantalla.blit(self.boton_settings, self.rect_boton_settings)
+            if self.ventana_settings_abierta:
+                self.dibujar_ventana_settings()
+            if self.ventana_creditos_abierta:
+                self.dibujar_ventana_creditos()
             
         elif self.estado_actual == "SELECCION":
             self.pantalla.blit(self.fondo_seleccion, (0, 0))
