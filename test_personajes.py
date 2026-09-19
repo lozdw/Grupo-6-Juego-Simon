@@ -1,7 +1,7 @@
 import unittest
 
 from app import App
-from personajes import Miku, Teto, Neru
+from personajes import Gumi, Miku, Teto, Neru
 from score import GestorPuntuacion
 
 
@@ -47,6 +47,9 @@ class PersonajesTests(unittest.TestCase):
         self.assertFalse(app.error_debe_penalizar())
         self.assertFalse(getattr(app, "bloquear_penalizacion", False))
         self.assertEqual(app.t_restante, 10.0)
+
+    def test_gumi_reduce_la_penalizacion_a_un_segundo(self):
+        self.assertEqual(Gumi().penalizacion_error, 1.0)
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ class Personaje(ABC):
         self._multiplicador_base = float(multiplicador)
         self.multiplicador_puntaje = float(multiplicador)
         self.escudo_activo = False
+        self.penalizacion_error = 2.0
 
     def aplicar_habilidad(self, estado_juego):
         if self.habilidad_aplicada:
@@ -101,16 +102,7 @@ class Neru(Personaje):
 class Gumi(Personaje):
     def __init__(self):
         super().__init__("Gumi", multiplicador=1.2)
+        self.penalizacion_error = 1.0
 
     def _aplicar_habilidad(self, estado_juego):
-        total = float(getattr(estado_juego, "t_total", 0.0))
-        restante = float(getattr(estado_juego, "t_restante", 0.0))
-
-        if total <= 0:
-            total = restante if restante > 0 else 0.0
-        if restante < 0:
-            restante = 0.0
-
-        recuperacion = min(restante * 0.5, max(0.0, total - restante))
-        estado_juego.t_restante = min(total, max(0.0, restante + recuperacion))
-        self.multiplicador_puntaje = 1.2
+        pass

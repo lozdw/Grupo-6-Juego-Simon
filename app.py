@@ -19,10 +19,12 @@ class App:
         self.gestor_puntuacion = GestorPuntuacion()
         self.gestor_secuencia = GestorSecuencia(config.archivo_niveles)
         self.personaje_actual = None
+        self.penalizacion_error = 2.0
 
         pygame.font.init()
         self.fuente_titulo = pygame.font.Font(str(config.archivo_fuente), 48)
         self.fuente_normal = pygame.font.Font(str(config.archivo_fuente), 24)
+        self.fuente_mensaje = pygame.font.Font(str(config.archivo_fuente), 16)
         self.musica_reproduciendose = False
         if pygame.mixer.get_init() and config.archivo_musica.exists():
             pygame.mixer.music.load(str(config.archivo_musica))
@@ -234,6 +236,7 @@ class App:
     def preparar_juego(self):
         self.gestor_secuencia.iniciar_juego()
         self.personaje_actual.reiniciar_habilidad()
+        self.penalizacion_error = self.personaje_actual.penalizacion_error
         self.t_total = 10.0
         self.t_restante = 10.0
         self.mensaje = f"Nivel {self.gestor_secuencia.consultar_nivel()}"
@@ -410,11 +413,11 @@ class App:
                     resultado = self.gestor_secuencia.verificar_color(numero)
                     if resultado == "ERROR":
                         if self.error_debe_penalizar():
-                            self.t_restante -= 2.0
+                            self.t_restante -= self.penalizacion_error
                             if self.t_restante <= 0:
                                 self.estado_actual = "GAME_OVER"
                             else:
-                                self.mensaje = "¡Error! Repitiendo (-2s)"
+                                self.mensaje = f"¡Error! Repitiendo (-{self.penalizacion_error:g}s)"
                                 self.iniciar_animacion()
                         else:
                             self.mensaje = "¡Escudo de Neru!"
@@ -480,17 +483,41 @@ class App:
         self.pantalla.blit(imagen, imagen.get_rect(center=(rect.centerx, rect.top + 95)))
         self.dibujar_texto_centrado(nombre, self.fuente_normal, (0, 0, 0), (rect.centerx, rect.bottom - 28))
 
-    def dibujar_mensaje_ingresar(self, rect):
-        rect_mensaje = pygame.Rect(0, rect.bottom + 12, 210, 42)
+    def dibujar_mensaje_ingresar(self, rect, nombre):
+        mensajes = {
+            "Miku": "Al presionar el botón correcto por primera vez en la secuencia, Miku sumará 3 segundos al contador de tiempo, pudiendo exceder el límite de 10 segundos",
+            "Teto": "Al presionar el botón correcto por primera vez en la secuencia, Teto aumentará el multiplicador interno de puntaje x2 veces.",
+            "Neru": "Al finalizar la ejecución de la secuencia, Neru generará un escudo que va a exonerar la penalización de tiempo en tu primer error.",
+            "Gumi": "Cada que cometas un error en la secuencia, Gumi reducirá la penalización de tiempo a solo 1 segundo.",
+            "default": "INGRESAR AQUÍ",
+        }
+        texto = mensajes.get(nombre, mensajes["default"])
+        ancho_mensaje = rect.width
+        ancho_texto = ancho_mensaje - 16
+        lineas = []
+        linea_actual = ""
+        for palabra in texto.split():
+            linea_prueba = f"{linea_actual} {palabra}".strip()
+            if self.fuente_mensaje.size(linea_prueba)[0] <= ancho_texto:
+                linea_actual = linea_prueba
+            else:
+                lineas.append(linea_actual)
+                linea_actual = palabra
+        if linea_actual:
+            lineas.append(linea_actual)
+
+        alto_mensaje = len(lineas) * 20 + 12
+        rect_mensaje = pygame.Rect(0, rect.bottom + 12, ancho_mensaje, alto_mensaje)
         rect_mensaje.centerx = rect.centerx
         pygame.draw.rect(self.pantalla, (255, 255, 255), rect_mensaje)
         pygame.draw.rect(self.pantalla, (0, 0, 0), rect_mensaje, 2)
-        self.dibujar_texto_centrado(
-            "INGRESAR AQUÍ",
-            self.fuente_normal,
-            (0, 0, 0),
-            rect_mensaje.center,
-        )
+        for indice, linea in enumerate(lineas):
+            self.dibujar_texto_centrado(
+                linea,
+                self.fuente_mensaje,
+                (0, 0, 0),
+                (rect_mensaje.centerx, rect_mensaje.top + 10 + indice * 20),
+            )
 
     def dibujar_texto_lateral(self, texto, fuente, color, y, lado):
         superficie = fuente.render(texto, True, color)
@@ -617,7 +644,7 @@ class App:
             for rect, nombre in personajes:
                 self.dibujar_personaje(rect, nombre)
                 if nombre == self.personaje_hover:
-                    self.dibujar_mensaje_ingresar(rect)
+                    self.dibujar_mensaje_ingresar(rect, nombre)
             if self.gestor_puntuacion.total > 0:
                 limite_inferior_botones = max(
                     rect.bottom for rect in (self.rect_miku, self.rect_teto, self.rect_neru, self.rect_gumi)
