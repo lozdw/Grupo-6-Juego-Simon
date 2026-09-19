@@ -48,10 +48,12 @@ class App:
 
         directorio_imagenes = config.directorio_base / "assets" / "images"
         directorio_fondos = config.directorio_base / "assets" / "backgrounds"
-        self.fondo_menu = pygame.transform.smoothscale(
-            pygame.image.load(directorio_fondos / "fondo cortado.png").convert(),
+        self.marco_menu = pygame.transform.smoothscale(
+            pygame.image.load(directorio_fondos / "fondo cortado.png").convert_alpha(),
             self.pantalla.get_size(),
         )
+        self.marco_menu.set_colorkey((42, 43, 46))
+        self.fondo_menu = self.marco_menu.copy()
         self.video_fondo = None
         if cv2 is not None:
             self.video_fondo = cv2.VideoCapture(str(directorio_fondos / "fondo juego.mp4"))
@@ -548,6 +550,7 @@ class App:
         if self.estado_actual == "MENU":
             self.actualizar_fondo_menu()
             self.pantalla.blit(self.fondo_menu, (0, 0))
+            self.pantalla.blit(self.marco_menu, (0, 0))
             centro_x = self.pantalla.get_rect().centerx
             centro_y = self.pantalla.get_rect().centery
             self.dibujar_texto_centrado("VoColoroid", self.fuente_titulo, (0, 0, 0), (centro_x, centro_y - 100))
