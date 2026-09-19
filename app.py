@@ -56,6 +56,10 @@ class App:
         )
         self.marco_menu.set_colorkey((42, 43, 46))
         self.fondo_menu = self.marco_menu.copy()
+        self.fondo_seleccion = pygame.transform.smoothscale(
+            pygame.image.load(directorio_fondos / "5 sin título.png").convert(),
+            self.pantalla.get_size(),
+        )
         self.video_fondo = None
         if cv2 is not None:
             self.video_fondo = cv2.VideoCapture(str(directorio_fondos / "e.mp4"))
@@ -187,9 +191,9 @@ class App:
         centro_x = self.pantalla.get_rect().centerx
         centro_y = self.pantalla.get_rect().centery
         self.rect_iniciar = pygame.Rect(centro_x - 200, centro_y - 35, 400, 70)
-        ancho_boton_personaje = 230
-        alto_boton_personaje = 230
-        espacio_boton_personaje = 20
+        ancho_boton_personaje = 210
+        alto_boton_personaje = 210
+        espacio_boton_personaje = 15
         inicio_x = centro_x - (
             (ancho_boton_personaje * 4 + espacio_boton_personaje * 3) // 2
         )
@@ -631,10 +635,11 @@ class App:
             self.dibujar_boton(self.rect_iniciar, "Haz clic para iniciar", (255, 255, 255), (50, 50, 50))
             
         elif self.estado_actual == "SELECCION":
+            self.pantalla.blit(self.fondo_seleccion, (0, 0))
             centro_x = self.pantalla.get_rect().centerx
             centro_y = self.pantalla.get_rect().centery
             self.actualizar_personaje_hover(pygame.mouse.get_pos())
-            self.dibujar_texto_centrado("ELEGIR PERSONAJE", self.fuente_titulo, (0, 0, 0), (centro_x, 55))
+            self.dibujar_texto_centrado("ELEGIR PERSONAJE", self.fuente_titulo, (0, 0, 0), (centro_x, 93))
             personajes = (
                 (self.rect_miku, "Miku"),
                 (self.rect_teto, "Teto"),
